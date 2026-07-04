@@ -94,7 +94,7 @@ export default async function ObligationsPage({
         from entity data.{" "}
         {savedCount > 0
           ? `${savedCount} obligations currently saved to the database.`
-          : "No obligations saved yet. Click "Save to Database" to persist this calendar."}
+          : "No obligations saved yet. Click \u201cSave to Database\u201d to persist this calendar."}
       </div>
 
       {/* Entity flags summary */}
