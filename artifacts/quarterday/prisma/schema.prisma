@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organisation {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  entities Entity[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String       @unique
+  role           String       @default("member")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Entity {
+  id                   String       @id @default(cuid())
+  organisationId       String
+  organisation         Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  legalName            String
+  companiesHouseNumber String?
+  jurisdiction         String       @default("England & Wales")
+  accountingYearEndMonth Int
+  accountingYearEndDay   Int
+  vatQuarterEndMonth   Int?
+  isLargeCompany       Boolean      @default(false)
+  isVeryLargeCompany   Boolean      @default(false)
+  hasErs               Boolean      @default(false)
+  hasPillar2           Boolean      @default(false)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  obligations Obligation[]
+}
+
+model ObligationRule {
+  id          String   @id @default(cuid())
+  ruleKey     String   @unique
+  name        String
+  description String
+  appliesTo   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  obligations Obligation[]
+}
+
+model Obligation {
+  id        String         @id @default(cuid())
+  entityId  String
+  entity    Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  ruleId    String
+  rule      ObligationRule @relation(fields: [ruleId], references: [id])
+  title     String
+  dueDate   DateTime
+  period    String
+  status    String         @default("DRAFT")
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
