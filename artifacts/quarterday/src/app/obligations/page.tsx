@@ -65,6 +65,13 @@ export default async function ObligationsPage({
   const conditions: Prisma.ManualObligationWhereInput[] = [
     { organisationId: org?.id ?? "" },
     { archivedAt: showArchived ? { not: null } : null },
+    // Exclude pending/rejected/N/A drafts — only show manually-created or activated obligations
+    {
+      OR: [
+        { draftReviewStatus: null },
+        { draftReviewStatus: "activated" },
+      ],
+    },
   ];
 
   if (sp.entity) conditions.push({ entityId: sp.entity });

@@ -1,0 +1,210 @@
+Add a UK obligations rules pack for Quarterday.
+
+This rules pack should generate draft tax obligations from the entity tax profile and entity data.
+
+Important:
+This feature should not calculate tax.
+This feature should not file anything with HMRC.
+This feature should not treat generated obligations as final.
+Every generated obligation must be draft until reviewed by a human.
+
+The system should generate draft obligations for:
+
+1. Corporation Tax return / CT600 filing.
+2. Corporation Tax payment.
+3. Quarterly Instalment Payments, including large and very large company flags.
+4. VAT quarterly returns.
+5. P11D and P11D(b).
+6. PSA process.
+7. ERS annual return.
+8. EMI annual return, if EMI scheme flag is true.
+9. R&D claim notification, if R&D claim expected flag is true.
+10. R&D additional information form, if R&D claim expected flag is true.
+11. Capital allowances evidence/review workflow, if capital allowances activity flag is true.
+12. Published Tax Strategy review, if published tax strategy flag is true.
+13. SAO certification workflow, if SAO flag is true.
+14. Pillar 2 registration/reporting placeholder, if Pillar 2 flag is true.
+
+Use the entity fields created earlier, including:
+1. Legal name.
+2. Jurisdiction.
+3. Accounting period start.
+4. Accounting period end.
+5. VAT registration status.
+6. VAT quarter end month.
+7. Corporation Tax return required flag.
+8. Corporation Tax payment required flag.
+9. Large company flag.
+10. Very large company flag.
+11. ERS flag.
+12. EMI flag.
+13. PAYE registered flag.
+14. P11D required flag.
+15. PSA required flag.
+16. R&D claim expected flag.
+17. Capital allowances activity flag.
+18. Published tax strategy flag.
+19. SAO flag.
+20. Pillar 2 flag.
+
+Each generated draft obligation should include:
+
+Core fields:
+1. Entity.
+2. Regime.
+3. Obligation type.
+4. Description.
+5. Statutory basis or rule basis.
+6. Filing deadline.
+7. Payment deadline, if applicable.
+8. Internal target date.
+9. Period start date.
+10. Period end date.
+11. Recurrence.
+12. Source type = Rules pack.
+13. Rule ID.
+14. Calculation basis.
+15. Human-readable explanation.
+
+Status fields:
+1. Data completeness status = Not started.
+2. Data validation status = Not started.
+3. Technical review status = Not started.
+4. Approval status = Not started.
+5. Evidence status = Not started.
+6. Filing/payment status = Not started.
+7. Overall workflow status = Draft.
+
+Ownership fields:
+1. Responsible owner.
+2. Accountable owner.
+3. Consulted party.
+4. Informed party.
+5. External adviser.
+
+If ownership is unknown, leave the field blank and show “Needs owner”.
+
+The generated obligations should appear in a “Draft Generated Obligations” review page.
+
+On that page, the user should be able to:
+1. View each generated obligation.
+2. See why it was generated.
+3. See the calculation basis.
+4. Edit the draft.
+5. Activate it.
+6. Reject it.
+7. Mark it as not applicable.
+8. Add a note explaining rejection or not applicable status.
+
+Do not insert generated obligations directly into the live obligations register.
+Only activated obligations should become live obligations.
+
+Add audit events for:
+1. Obligation generated.
+2. Obligation activated.
+3. Obligation rejected.
+4. Obligation marked not applicable.
+5. Obligation edited before activation.
+
+Add a simple rules table or rules config file.
+
+Each rule should include:
+1. Rule ID.
+2. Regime.
+3. Obligation type.
+4. Trigger condition.
+5. Date calculation logic.
+6. Default internal target offset.
+7. Statutory basis or rule basis text.
+8. Effective from date.
+9. Effective to date, optional.
+10. Active/inactive flag.
+
+Example rule categories:
+
+Corporation Tax:
+- Generate CT600 filing obligation if Corporation Tax return required is true.
+- Generate Corporation Tax payment obligation if Corporation Tax payment required is true.
+- Link both to the entity accounting period.
+
+QIPs:
+- Generate QIP obligations only where large company or very large company flag is true.
+- Use the relevant company flag to choose the correct instalment pattern.
+- Show the calculation basis clearly.
+- If the system is uncertain, generate a warning and require human review.
+
+VAT:
+- Generate quarterly VAT return obligations only where VAT registered is true.
+- Use VAT quarter end month to calculate the quarterly cycle.
+- Include both filing and payment statuses, even if the same date is used.
+
+P11D/P11D(b):
+- Generate P11D/P11D(b) obligations only where P11D required is true.
+- Include evidence preparation, technical review and filing statuses.
+
+PSA:
+- Generate PSA workflow obligations only where PSA required is true.
+- Include agreement/review, calculation, submission/payment steps if possible.
+
+ERS:
+- Generate ERS annual return obligation only where ERS flag is true.
+- Treat this as a filing obligation with evidence preparation and technical review.
+
+EMI:
+- Generate EMI annual return obligation only where EMI flag is true.
+- Treat EMI separately from general ERS where useful.
+
+R&D:
+- If R&D claim expected is true, generate draft workflow obligations for:
+  1. R&D claim notification review.
+  2. R&D additional information form preparation.
+  3. R&D technical evidence pack.
+  4. R&D claim review before CT600 submission.
+- Do not calculate the R&D claim amount.
+- Do not decide whether the claim qualifies.
+- Show these as claim/evidence/review workflows.
+
+Capital Allowances:
+- If capital allowances activity is true, generate draft workflow obligations for:
+  1. Fixed asset register review.
+  2. Capital expenditure evidence collection.
+  3. AIA/full expensing/special rate review.
+  4. Capital allowances position included in CT computation.
+- Do not calculate allowances.
+- Do not calculate pools.
+- Treat these as evidence and review workflows linked to Corporation Tax.
+
+SAO:
+- If SAO flag is true, generate SAO certification workflow tasks.
+- Include owner, evidence and approval statuses.
+
+Published Tax Strategy:
+- If published tax strategy flag is true, generate annual review/publication workflow.
+- Include internal approval and publication evidence.
+
+Pillar 2:
+- If Pillar 2 flag is true, generate placeholder obligations for registration/reporting review.
+- Mark these as high review priority.
+- Make clear that dates must be reviewed by a tax owner.
+
+The UI should include:
+1. Rules pack page.
+2. Draft generated obligations page.
+3. Live obligations page.
+4. Rule basis visible on every generated obligation.
+5. Warning badge where the rule depends on user-provided flags.
+
+Add a “Regenerate draft obligations” button for each entity.
+
+When regenerating:
+1. Do not duplicate already activated obligations.
+2. Show new drafts separately.
+3. Show changed drafts separately.
+4. Preserve previously rejected or not applicable decisions.
+5. Create an audit event.
+
+Do not build AI extraction yet.
+Do not build HMRC filing.
+Do not build tax calculations.
+Do not build full integrations.
+This is a rules-based draft obligation generator for human review.

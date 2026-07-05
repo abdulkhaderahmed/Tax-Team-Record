@@ -1,5 +1,6 @@
 {
+  "/entities/[id]/page": "app/entities/[id]/page.js",
   "/page": "app/page.js",
-  "/rules/page": "app/rules/page.js",
-  "/obligations/calendar/page": "app/obligations/calendar/page.js"
+  "/obligations/drafts/page": "app/obligations/drafts/page.js",
+  "/entities/page": "app/entities/page.js"
 }

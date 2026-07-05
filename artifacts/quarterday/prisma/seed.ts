@@ -106,6 +106,45 @@ async function main() {
 
   console.log(`Demo org: ${org.name}`);
   console.log("Demo user: alex@acmetax.co.uk (admin)");
+
+  // Demo entity — representative mid-size UK company with many flags set
+  const entity = await prisma.entity.upsert({
+    where: { id: "demo-entity-1" },
+    update: {},
+    create: {
+      id: "demo-entity-1",
+      organisationId: org.id,
+      legalName: "Acme Operations Ltd",
+      companiesHouseNumber: "12345678",
+      jurisdiction: "England & Wales",
+      entityType: "Private limited company",
+      ukTaxResident: true,
+      corporationTaxUtr: "1234567890",
+      accountingPeriodStart: new Date("2025-04-01"),
+      accountingPeriodEnd: new Date("2026-03-31"),
+      ctReturnRequired: true,
+      isLargeCompany: false,
+      isVeryLargeCompany: false,
+      vatRegistered: true,
+      vatRegistrationNumber: "GB123456789",
+      vatQuarterEndMonth: 3,
+      payeRegistered: true,
+      hasErs: true,
+      hasEmi: false,
+      p11dRequired: true,
+      psaRequired: false,
+      rdClaimExpected: true,
+      rdNotificationNeeded: false,
+      rdAifNeeded: true,
+      capitalAllowancesActivity: true,
+      saoInScope: false,
+      publishedTaxStrategyInScope: false,
+      hasPillar2: false,
+      primaryTaxOwner: "Alex Smith",
+      externalAdviser: "Big4 LLP",
+    },
+  });
+  console.log(`Demo entity: ${entity.legalName}`);
 }
 
 main()

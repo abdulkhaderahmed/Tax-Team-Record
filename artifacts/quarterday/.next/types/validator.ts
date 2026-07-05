@@ -108,6 +108,33 @@ type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> = {
   type __Unused = __Check
 }
 
+// Validate ../../src/app/obligations/drafts/[id]/not-applicable/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/obligations/drafts/[id]/not-applicable">> = Specific
+  const handler = {} as typeof import("../../src/app/obligations/drafts/[id]/not-applicable/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/obligations/drafts/[id]/reject/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/obligations/drafts/[id]/reject">> = Specific
+  const handler = {} as typeof import("../../src/app/obligations/drafts/[id]/reject/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/obligations/drafts/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/obligations/drafts">> = Specific
+  const handler = {} as typeof import("../../src/app/obligations/drafts/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/obligations/new/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/obligations/new">> = Specific
@@ -130,6 +157,15 @@ type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> = {
 {
   type __IsExpected<Specific extends AppPageConfig<"/">> = Specific
   const handler = {} as typeof import("../../src/app/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/rules-pack/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/rules-pack">> = Specific
+  const handler = {} as typeof import("../../src/app/rules-pack/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

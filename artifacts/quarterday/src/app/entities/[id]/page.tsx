@@ -3,6 +3,18 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { fmtDate, MONTH_NAMES } from "@/lib/obligations";
 import { deleteEntity } from "@/app/actions/entities";
+import { generateEntityDrafts } from "@/app/actions/draftObligations";
+
+function GenerateButton({ entityId }: { entityId: string }) {
+  const action = generateEntityDrafts.bind(null, entityId);
+  return (
+    <form action={action}>
+      <button type="submit" className="btn btn-primary">
+        Generate Draft Obligations
+      </button>
+    </form>
+  );
+}
 
 function YesNo({ value }: { value: boolean }) {
   return (
@@ -56,9 +68,10 @@ export default async function EntityDetailPage({
           <Link href={`/entities/${entity.id}/edit`} className="btn btn-secondary">
             Edit
           </Link>
-          <Link href={`/entities/${entity.id}/obligations`} className="btn btn-primary">
+          <Link href={`/entities/${entity.id}/obligations`} className="btn btn-secondary">
             Obligations Calendar
           </Link>
+          <GenerateButton entityId={entity.id} />
         </div>
       </div>
 

@@ -11,20 +11,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/obligations/page": [
+    "/rules-pack/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/obligations/page.js"
+      "static/chunks/app/rules-pack/page.js"
     ],
-    "/rules/page": [
+    "/entities/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/rules/page.js"
+      "static/chunks/app/entities/page.js"
     ],
-    "/obligations/calendar/page": [
+    "/obligations/drafts/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/obligations/calendar/page.js"
+      "static/chunks/app/obligations/drafts/page.js"
+    ],
+    "/entities/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/entities/[id]/page.js"
     ]
   }
 }

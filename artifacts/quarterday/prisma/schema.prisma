@@ -188,6 +188,14 @@ model ManualObligation {
   createdBy               String?
   lastUpdatedBy           String?
 
+  // Rules-pack / draft generation
+  ruleId            String?
+  calculationBasis  String?
+  humanExplanation  String?
+  draftReviewStatus String?  // pending | activated | rejected | not_applicable
+  draftNote         String?
+  generationBatchId String?
+
   archivedAt DateTime?
 
   createdAt DateTime @default(now())
