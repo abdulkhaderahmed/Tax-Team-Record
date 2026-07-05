@@ -11,25 +11,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/rules-pack/page": [
+    "/sources/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/rules-pack/page.js"
+      "static/chunks/app/sources/page.js"
     ],
-    "/entities/page": [
+    "/sources/priority-rules/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/entities/page.js"
+      "static/chunks/app/sources/priority-rules/page.js"
     ],
-    "/obligations/drafts/page": [
+    "/sources/data-categories/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/obligations/drafts/page.js"
-    ],
-    "/entities/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/entities/[id]/page.js"
+      "static/chunks/app/sources/data-categories/page.js"
     ]
   }
 }

@@ -180,6 +180,87 @@ type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> = {
   type __Unused = __Check
 }
 
+// Validate ../../src/app/sources/[id]/edit/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/[id]/edit">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/[id]/edit/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/conflicts/[id]/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/conflicts/[id]">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/conflicts/[id]/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/conflicts/new/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/conflicts/new">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/conflicts/new/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/conflicts/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/conflicts">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/conflicts/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/data-categories/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/data-categories">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/data-categories/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/new/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/new">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/new/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/priority-rules/[categoryId]/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/priority-rules/[categoryId]">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/priority-rules/[categoryId]/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/sources/priority-rules/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/sources/priority-rules">> = Specific
+  const handler = {} as typeof import("../../src/app/sources/priority-rules/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 
 
 

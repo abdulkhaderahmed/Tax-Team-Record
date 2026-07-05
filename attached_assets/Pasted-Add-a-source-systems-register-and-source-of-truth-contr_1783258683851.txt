@@ -1,0 +1,211 @@
+Add a source systems register and source-of-truth control layer for Quarterday.
+
+Purpose:
+This feature helps an in-house tax team record where tax-relevant facts come from, which source is authoritative, and what happens when sources conflict.
+
+This is a governance layer only.
+Do not build live integrations yet.
+Do not connect to payroll, HR, Companies House or ERP APIs yet.
+Do not automate data imports yet.
+
+Users should be able to create, edit and archive source systems.
+
+Create a source systems register with these fields:
+
+Core fields:
+1. Source system name.
+2. Source system type.
+3. Description.
+4. Owner.
+5. Department.
+6. External provider, if applicable.
+7. Access method.
+8. Data refresh frequency.
+9. Contains personal data? yes/no.
+10. Contains privileged/confidential data? yes/no.
+11. Status: Active, Planned, Archived.
+
+Source system type should be a dropdown with at least:
+1. Payroll.
+2. HR.
+3. ERP / general ledger.
+4. Fixed asset register.
+5. Cap table.
+6. Company secretarial system.
+7. Legal documents.
+8. Adviser documents.
+9. Companies House.
+10. HMRC portal.
+11. Filing software.
+12. Share plan administrator.
+13. Spreadsheet.
+14. Email inbox.
+15. Document management system.
+16. Other.
+
+Access method should be a dropdown with at least:
+1. Manual entry.
+2. File upload.
+3. CSV export.
+4. API later.
+5. Email attachment.
+6. Read-only document.
+7. External adviser provided.
+8. Unknown.
+
+Create a data categories table.
+
+Data categories should include at least:
+1. Legal entity name.
+2. Company registration number.
+3. Corporation Tax UTR.
+4. Accounting period start/end.
+5. Companies House accounts due date.
+6. Corporation Tax filing deadline.
+7. Corporation Tax payment deadline.
+8. VAT registration number.
+9. VAT quarter/stagger.
+10. PAYE reference.
+11. Employee identity.
+12. Employee tax residence.
+13. Payroll taxable pay.
+14. Benefits and expenses data.
+15. P11D data.
+16. PSA data.
+17. Share scheme participant data.
+18. EMI option data.
+19. ERS reportable event data.
+20. Cap table/shareholding data.
+21. Share valuation data.
+22. R&D project data.
+23. R&D expenditure data.
+24. R&D technical evidence.
+25. Fixed asset register data.
+26. Capital expenditure data.
+27. Capital allowances treatment.
+28. Group relief/loss data.
+29. Transfer pricing documentation.
+30. Pillar 2 data.
+31. Adviser technical advice.
+32. Filing submission evidence.
+33. Payment evidence.
+34. Board/approval evidence.
+35. Other.
+
+Add data source priority rules.
+
+Users should be able to define, for each data category:
+1. Authoritative source.
+2. Secondary source.
+3. Tertiary source.
+4. Conflict handling rule.
+5. Review owner.
+6. Review frequency.
+7. Notes.
+
+Conflict handling rule should be a dropdown with at least:
+1. Authoritative source wins.
+2. Manual review required.
+3. Tax owner approval required.
+4. Adviser confirmation required.
+5. Finance confirmation required.
+6. Payroll confirmation required.
+7. Legal confirmation required.
+
+Example defaults:
+1. Legal entity name: Companies House authoritative, adviser document secondary.
+2. Company registration number: Companies House authoritative.
+3. Corporation Tax UTR: HMRC portal authoritative.
+4. Accounting period: ERP/general ledger authoritative, adviser document secondary.
+5. VAT stagger: HMRC portal authoritative, finance spreadsheet secondary.
+6. Payroll taxable pay: Payroll authoritative, HR secondary.
+7. Employee tax residence: HR/global mobility authoritative, adviser document secondary.
+8. EMI exercise date: Legal documents authoritative, adviser document secondary.
+9. ERS reportable event data: Share plan administrator authoritative, cap table secondary, adviser document tertiary.
+10. Cap table/shareholding data: Cap table/company secretarial system authoritative, adviser document secondary.
+11. Share valuation data: Signed valuation report authoritative, adviser memo secondary.
+12. R&D expenditure: ERP/general ledger authoritative, adviser claim schedule secondary.
+13. R&D technical evidence: Internal project owner authoritative, adviser report secondary.
+14. Fixed asset register data: Fixed asset register authoritative, ERP secondary.
+15. Capital expenditure data: ERP/general ledger authoritative, fixed asset register secondary.
+16. Adviser technical advice: Adviser document authoritative for advice conclusion, but not necessarily authoritative for underlying facts.
+17. Filing submission evidence: HMRC portal or filing software authoritative.
+18. Payment evidence: Bank/ERP authoritative.
+
+Add source references to obligations, actions, assumptions, review items and documents.
+
+For each obligation/action/assumption, allow the user to record:
+1. Primary source system.
+2. Source document reference.
+3. Source page/paragraph/chunk.
+4. Whether the source is authoritative for the data category.
+5. Override reason if a non-authoritative source is used.
+6. Source confidence: High, Medium, Low.
+7. Last source verification date.
+8. Next source review date.
+
+If the selected source is not the authoritative source for that data category:
+1. Show a warning.
+2. Require an override reason.
+3. Create an audit event.
+4. Optionally create an exception if the risk level is high.
+
+Add a source conflict workflow.
+
+Users should be able to create a source conflict record where two sources disagree.
+
+Conflict fields:
+1. Data category.
+2. Entity.
+3. Source A.
+4. Source A value.
+5. Source B.
+6. Source B value.
+7. Severity.
+8. Review owner.
+9. Required confirmation party.
+10. Status.
+11. Resolution.
+12. Resolved value.
+13. Resolution rationale.
+
+Conflict statuses:
+1. Open.
+2. Under review.
+3. Awaiting adviser.
+4. Awaiting finance.
+5. Awaiting payroll.
+6. Awaiting legal.
+7. Resolved.
+8. Closed as not material.
+
+Build UI pages:
+1. Source systems list.
+2. Create/edit source system.
+3. Data categories list.
+4. Source priority rules page.
+5. Source conflicts page.
+6. Source conflict detail page.
+
+Show useful warnings in the UI:
+1. “No authoritative source defined.”
+2. “Selected source is not authoritative.”
+3. “Source has not been verified recently.”
+4. “Conflict open for this data category.”
+5. “Manual review required before activation.”
+
+Add audit events for:
+1. Source system created.
+2. Source system edited.
+3. Source system archived.
+4. Source priority rule created.
+5. Source priority rule edited.
+6. Non-authoritative source override.
+7. Source conflict created.
+8. Source conflict resolved.
+
+Do not build API integrations.
+Do not build automated imports.
+Do not build AI extraction.
+Do not build tax calculations.
+This step is only about making source-of-truth governance explicit and reviewable.

@@ -17,6 +17,9 @@ model Organisation {
   entities           Entity[]
   auditEvents        AuditEvent[]
   manualObligations  ManualObligation[]
+  sourceSystems      SourceSystem[]
+  sourcePriorityRules SourcePriorityRule[]
+  sourceConflicts    SourceConflict[]
 }
 
 model User {
@@ -101,6 +104,7 @@ model Entity {
   obligations       Obligation[]
   auditEvents       AuditEvent[]
   manualObligations ManualObligation[]
+  sourceConflicts   SourceConflict[]
 }
 
 model ObligationRule {
@@ -201,10 +205,141 @@ model ManualObligation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sourceRef ObligationSourceRef?
+
   @@index([organisationId])
   @@index([entityId])
   @@index([filingDeadline])
   @@index([overallWorkflowStatus])
+}
+
+// ── Source Systems ────────────────────────────────────────────
+
+model SourceSystem {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  name                  String
+  systemType            String
+  description           String?
+  owner                 String?
+  department            String?
+  externalProvider      String?
+  accessMethod          String?
+  refreshFrequency      String?
+  containsPersonalData   Boolean @default(false)
+  containsPrivilegedData Boolean @default(false)
+  status                String  @default("Active") // Active | Planned | Archived
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  priorityRulesAuth      SourcePriorityRule[] @relation("AuthoritativeSource")
+  priorityRulesSecondary SourcePriorityRule[] @relation("SecondarySource")
+  priorityRulesTertiary  SourcePriorityRule[] @relation("TertiarySource")
+  conflictsAsA           SourceConflict[]     @relation("ConflictSourceA")
+  conflictsAsB           SourceConflict[]     @relation("ConflictSourceB")
+  obligationSourceRefs   ObligationSourceRef[]
+
+  @@index([organisationId])
+}
+
+model DataCategory {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  priorityRules        SourcePriorityRule[]
+  conflicts            SourceConflict[]
+  obligationSourceRefs ObligationSourceRef[]
+}
+
+model SourcePriorityRule {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  dataCategoryId String
+  dataCategory   DataCategory @relation(fields: [dataCategoryId], references: [id])
+
+  authSourceId      String?
+  authSource        SourceSystem? @relation("AuthoritativeSource", fields: [authSourceId], references: [id])
+  secondarySourceId String?
+  secondarySource   SourceSystem? @relation("SecondarySource", fields: [secondarySourceId], references: [id])
+  tertiarySourceId  String?
+  tertiarySource    SourceSystem? @relation("TertiarySource", fields: [tertiarySourceId], references: [id])
+
+  conflictHandling String?
+  reviewOwner      String?
+  reviewFrequency  String?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organisationId, dataCategoryId])
+  @@index([organisationId])
+}
+
+model SourceConflict {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  dataCategoryId String
+  dataCategory   DataCategory @relation(fields: [dataCategoryId], references: [id])
+
+  entityId String?
+  entity   Entity? @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  sourceAId    String
+  sourceA      SourceSystem @relation("ConflictSourceA", fields: [sourceAId], references: [id])
+  sourceAValue String
+
+  sourceBId    String
+  sourceB      SourceSystem @relation("ConflictSourceB", fields: [sourceBId], references: [id])
+  sourceBValue String
+
+  severity             String?
+  reviewOwner          String?
+  requiredConfirmation String?
+  status               String    @default("Open")
+  resolution           String?
+  resolvedValue        String?
+  resolutionRationale  String?
+  resolvedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organisationId])
+  @@index([dataCategoryId])
+  @@index([status])
+}
+
+model ObligationSourceRef {
+  id           String           @id @default(cuid())
+  obligationId String           @unique
+  obligation   ManualObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+
+  sourceSystemId String?
+  sourceSystem   SourceSystem? @relation(fields: [sourceSystemId], references: [id])
+
+  dataCategoryId String?
+  dataCategory   DataCategory? @relation(fields: [dataCategoryId], references: [id])
+
+  documentReference String?
+  pageOrChunk       String?
+  isAuthoritative   Boolean   @default(false)
+  overrideReason    String?
+  confidence        String?   // High | Medium | Low
+  lastVerifiedAt    DateTime?
+  nextReviewAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AuditEvent {

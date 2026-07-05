@@ -1,6 +1,6 @@
 {
-  "/entities/[id]/page": "app/entities/[id]/page.js",
   "/page": "app/page.js",
-  "/obligations/drafts/page": "app/obligations/drafts/page.js",
-  "/entities/page": "app/entities/page.js"
+  "/sources/page": "app/sources/page.js",
+  "/sources/priority-rules/page": "app/sources/priority-rules/page.js",
+  "/sources/data-categories/page": "app/sources/data-categories/page.js"
 }

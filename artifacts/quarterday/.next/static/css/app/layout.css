@@ -429,3 +429,27 @@ textarea { min-height: 72px; resize: vertical; }
 /* ── Small button ────────────────────────────────────────── */
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 
+/* ── Form fields ─────────────────────────────────────────── */
+.form-row { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 5px;
+}
+.form-input {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  background: #fff;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+select.form-input { cursor: pointer; }
+
