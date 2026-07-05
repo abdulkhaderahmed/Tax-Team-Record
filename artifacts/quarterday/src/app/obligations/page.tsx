@@ -106,6 +106,12 @@ export default async function ObligationsPage({
         <Link href="/obligations/new" className="btn btn-primary">+ New Obligation</Link>
       </div>
 
+      {/* Tab switcher */}
+      <div className="tab-bar">
+        <Link href="/obligations" className="tab tab-active">List</Link>
+        <Link href="/obligations/calendar" className="tab">Calendar</Link>
+      </div>
+
       {/* Filter bar */}
       <div className="panel" style={{ padding: "14px 20px", marginBottom: 16 }}>
         <form method="GET" action="/obligations">
