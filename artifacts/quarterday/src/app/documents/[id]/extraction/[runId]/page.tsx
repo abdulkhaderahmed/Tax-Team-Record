@@ -1,11 +1,19 @@
-import { AppShell } from "@/components/nav";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ITEM_TYPE_LABELS, REVIEW_STATUSES, type ItemType } from "@/lib/extraction-schema";
-import { updateReviewStatus, confirmItemAsObligation } from "@/app/actions/extraction";
+import { ITEM_TYPE_LABELS, type ItemType } from "@/lib/extraction-schema";
+import {
+  updateReviewStatus,
+  editAndConfirmReviewItem,
+  linkReviewItemToExisting,
+  confirmItemAsObligation,
+  confirmItemAsAction,
+  confirmItemAsAssumption,
+  confirmItemAsTripwire,
+} from "@/app/actions/extraction";
 
 const ORG_ID = "demo-org";
+const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
 function StatusBadge({ status }: { status: string }) {
   const cls =
@@ -66,6 +74,49 @@ function StructuredFields({ json }: { json: unknown }) {
   );
 }
 
+function ConfirmGuardrailFields({
+  item,
+  sourceIsAuthoritative,
+}: {
+  item: { confidenceScore: number; isConditional: boolean; conditionText: string | null };
+  sourceIsAuthoritative: boolean;
+}) {
+  const lowConfidence = item.confidenceScore < LOW_CONFIDENCE_THRESHOLD;
+  return (
+    <>
+      {(lowConfidence || item.isConditional || !sourceIsAuthoritative) && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 5, padding: 12, marginBottom: 12, fontSize: 12, color: "#92400e" }}>
+          {lowConfidence && <div>⚠ Low confidence — a reviewer note is required to confirm this item.</div>}
+          {item.isConditional && <div>⚠ Conditional item — the condition will be preserved unless you explicitly resolve it below.</div>}
+          {!sourceIsAuthoritative && <div>⚠ Non-authoritative source — verify the source or give an override reason below.</div>}
+        </div>
+      )}
+      <div className="form-row">
+        <label className="form-label">
+          Reviewer note {lowConfidence && <span style={{ color: "#b91c1c" }}>* required (low confidence)</span>}
+        </label>
+        <textarea name="reviewerNotes" className="form-input" rows={2} required={lowConfidence} />
+      </div>
+      {item.isConditional && (
+        <div className="form-row">
+          <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input type="checkbox" name="resolveCondition" /> This condition no longer applies (requires a note)
+          </label>
+          <textarea name="conditionResolutionNote" className="form-input" rows={2} placeholder={`Why "${item.conditionText}" no longer applies...`} />
+        </div>
+      )}
+      {!sourceIsAuthoritative && (
+        <div className="form-row">
+          <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input type="checkbox" name="sourceVerified" /> I have independently verified this source
+          </label>
+          <input name="sourceOverrideReason" className="form-input" placeholder="Or give a reason to override the non-authoritative source warning" />
+        </div>
+      )}
+    </>
+  );
+}
+
 export default async function ExtractionRunPage({
   params,
 }: {
@@ -74,7 +125,10 @@ export default async function ExtractionRunPage({
   const { id: documentId, runId } = await params;
 
   const [doc, run, entities] = await Promise.all([
-    prisma.document.findUnique({ where: { id: documentId }, select: { id: true, filename: true, organisationId: true, documentType: true } }),
+    prisma.document.findUnique({
+      where: { id: documentId },
+      select: { id: true, filename: true, organisationId: true, documentType: true, isAuthoritativeSource: true, sourceConfidence: true },
+    }),
     prisma.extractionRun.findUnique({
       where: { id: runId },
       include: {
@@ -86,6 +140,7 @@ export default async function ExtractionRunPage({
 
   if (!doc || doc.organisationId !== ORG_ID || !run) notFound();
 
+  const sourceIsAuthoritative = doc.isAuthoritativeSource === "Yes";
   const items = run.items;
   const needsReview = items.filter(i => i.reviewStatus === "Needs review" || i.reviewStatus === "In review").length;
   const confirmed = items.filter(i => i.reviewStatus === "Confirmed" || i.reviewStatus === "Edited and confirmed").length;
@@ -99,7 +154,7 @@ export default async function ExtractionRunPage({
   }
 
   return (
-    <AppShell>
+    <>
       <div style={{ padding: "28px 32px" }}>
         {/* Breadcrumb */}
         <div style={{ marginBottom: 16, fontSize: 13, color: "#6b7280" }}>
@@ -131,6 +186,13 @@ export default async function ExtractionRunPage({
         <div className="alert alert-warning" style={{ marginBottom: 16 }}>
           ⚠ All items below are <strong>AI-generated drafts</strong>. They have not been reviewed by a tax professional and must not be relied upon. Humans must confirm, edit or reject every item before it is used.
         </div>
+
+        {!sourceIsAuthoritative && (
+          <div className="alert" style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412", marginBottom: 16 }}>
+            <strong>Source not marked authoritative</strong> (source confidence: {doc.sourceConfidence}). Creating a live record from
+            these items will require source verification or an override reason.
+          </div>
+        )}
 
         {/* Error */}
         {run.status === "Failed" && run.errorMessage && (
@@ -256,24 +318,71 @@ export default async function ExtractionRunPage({
                     <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f3f4f6" }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 10 }}>Review actions</div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                        {(["Confirmed","In review","Needs adviser input","Needs source verification","Rejected","Duplicate","Not applicable"] as const).map((status) => {
+                        {(["In review","Needs adviser input","Needs source verification","Duplicate","Not applicable"] as const).map((status) => {
                           const action = updateReviewStatus.bind(null, item.id, status, undefined, undefined);
-                          const cls =
-                            status === "Confirmed" ? "btn btn-primary btn-sm" :
-                            status === "Rejected" ? "btn btn-sm" :
-                            "btn btn-secondary btn-sm";
                           return (
                             <form key={status} action={action} style={{ display: "inline" }}>
-                              <button type="submit" className={cls}
-                                style={status === "Rejected" ? { color: "#b91c1c", borderColor: "#fca5a5" } : {}}>
-                                {status}
-                              </button>
+                              <button type="submit" className="btn btn-secondary btn-sm">{status}</button>
                             </form>
                           );
                         })}
                       </div>
 
-                      {/* Create live obligation form */}
+                      {/* Confirm (quick, no live object) */}
+                      {item.confidenceScore >= LOW_CONFIDENCE_THRESHOLD ? (
+                        <form action={updateReviewStatus.bind(null, item.id, "Confirmed", undefined, undefined)} style={{ display: "inline-block", marginRight: 8, marginBottom: 12 }}>
+                          <button type="submit" className="btn btn-primary btn-sm">Confirm item</button>
+                        </form>
+                      ) : (
+                        <details style={{ display: "inline-block", marginRight: 8, marginBottom: 12, verticalAlign: "top" }}>
+                          <summary style={{ cursor: "pointer", fontSize: 13, color: "#1d4ed8", fontWeight: 600 }}>Confirm item (low confidence) →</summary>
+                          <form
+                            action={async (formData: FormData) => {
+                              "use server";
+                              await updateReviewStatus(item.id, "Confirmed", (formData.get("reviewerNotes") as string) ?? "", undefined);
+                            }}
+                            style={{ marginTop: 8, background: "#f9fafb", padding: 12, borderRadius: 6, border: "1px solid #e5e7eb", minWidth: 260 }}
+                          >
+                            <textarea name="reviewerNotes" className="form-input" rows={2} required placeholder="Reviewer note (required)" />
+                            <button type="submit" className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>Confirm with note</button>
+                          </form>
+                        </details>
+                      )}
+
+                      {/* Reject (requires reason) */}
+                      <details style={{ display: "inline-block", marginRight: 8, marginBottom: 12, verticalAlign: "top" }}>
+                        <summary style={{ cursor: "pointer", fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>Reject →</summary>
+                        <form
+                          action={async (formData: FormData) => {
+                            "use server";
+                            await updateReviewStatus(item.id, "Rejected", undefined, (formData.get("rejectionReason") as string) ?? "");
+                          }}
+                          style={{ marginTop: 8, background: "#f9fafb", padding: 12, borderRadius: 6, border: "1px solid #e5e7eb", minWidth: 260 }}
+                        >
+                          <input name="rejectionReason" className="form-input" required placeholder="Rejection reason (required)" />
+                          <button type="submit" className="btn btn-sm" style={{ marginTop: 8, color: "#b91c1c", borderColor: "#fca5a5" }}>Confirm rejection</button>
+                        </form>
+                      </details>
+
+                      {/* Edit and confirm */}
+                      <details style={{ marginTop: 8, marginBottom: 8 }}>
+                        <summary style={{ cursor: "pointer", fontSize: 13, color: "#1d4ed8", fontWeight: 600 }}>Edit item and confirm →</summary>
+                        <form action={editAndConfirmReviewItem.bind(null, item.id)} style={{ marginTop: 12, background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                          <div className="form-row">
+                            <label className="form-label">Summary</label>
+                            <textarea name="plainSummary" className="form-input" rows={2} required defaultValue={item.plainSummary} />
+                          </div>
+                          <div className="form-row">
+                            <label className="form-label">
+                              Reviewer note {item.confidenceScore < LOW_CONFIDENCE_THRESHOLD && <span style={{ color: "#b91c1c" }}>* required (low confidence)</span>}
+                            </label>
+                            <textarea name="reviewerNotes" className="form-input" rows={2} required={item.confidenceScore < LOW_CONFIDENCE_THRESHOLD} />
+                          </div>
+                          <button type="submit" className="btn btn-primary btn-sm">Save edit and confirm</button>
+                        </form>
+                      </details>
+
+                      {/* Create live obligation */}
                       {item.itemType === "obligation" && (
                         <details style={{ marginTop: 8 }}>
                           <summary style={{ cursor: "pointer", fontSize: 13, color: "#1d4ed8", fontWeight: 600 }}>
@@ -318,14 +427,163 @@ export default async function ExtractionRunPage({
                               <textarea name="description" className="form-input" rows={2} required
                                 defaultValue={item.plainSummary} />
                             </div>
-                            <div className="alert alert-warning" style={{ marginBottom: 12, fontSize: 12 }}>
+                            <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} />
+                            <div className="alert alert-warning" style={{ margin: "12px 0", fontSize: 12 }}>
                               ⚠ This will create a live draft obligation. Review all fields carefully before confirming.
-                              {item.isConditional && " This item is conditional — ensure the condition has been resolved."}
                             </div>
                             <button type="submit" className="btn btn-primary btn-sm">Confirm and create obligation</button>
                           </form>
                         </details>
                       )}
+
+                      {/* Create live action */}
+                      {item.itemType === "action" && (
+                        <details style={{ marginTop: 8 }}>
+                          <summary style={{ cursor: "pointer", fontSize: 13, color: "#1d4ed8", fontWeight: 600 }}>
+                            Create live action from this item →
+                          </summary>
+                          <form action={confirmItemAsAction.bind(null, item.id)} style={{ marginTop: 12, background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Entity <span style={{ color: "#b91c1c" }}>*</span></label>
+                                <select name="entityId" className="form-input" required>
+                                  <option value="">— select entity —</option>
+                                  {entities.map(e => <option key={e.id} value={e.id}>{e.legalName}</option>)}
+                                </select>
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Responsible party</label>
+                                <input name="responsibleParty" className="form-input" defaultValue={(data.responsibleParty as string) ?? item.suggestedOwner ?? ""} />
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Deadline</label>
+                                <input name="deadline" type="date" className="form-input" defaultValue={(data.deadline as string) ?? ""} />
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Evidence required</label>
+                                <input name="evidenceRequired" className="form-input" defaultValue={(data.evidenceRequired as string) ?? ""} />
+                              </div>
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Description <span style={{ color: "#b91c1c" }}>*</span></label>
+                              <textarea name="description" className="form-input" rows={2} required defaultValue={item.plainSummary} />
+                            </div>
+                            <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} />
+                            <div className="alert alert-warning" style={{ margin: "12px 0", fontSize: 12 }}>
+                              ⚠ This will create a live draft action. Review all fields carefully before confirming.
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-sm">Confirm and create action</button>
+                          </form>
+                        </details>
+                      )}
+
+                      {/* Create live assumption */}
+                      {item.itemType === "assumption" && (
+                        <details style={{ marginTop: 8 }}>
+                          <summary style={{ cursor: "pointer", fontSize: 13, color: "#1d4ed8", fontWeight: 600 }}>
+                            Create live assumption from this item →
+                          </summary>
+                          <form action={confirmItemAsAssumption.bind(null, item.id)} style={{ marginTop: 12, background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Entity <span style={{ color: "#b91c1c" }}>*</span></label>
+                                <select name="entityId" className="form-input" required>
+                                  <option value="">— select entity —</option>
+                                  {entities.map(e => <option key={e.id} value={e.id}>{e.legalName}</option>)}
+                                </select>
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Reliance importance</label>
+                                <select name="relianceImportance" className="form-input" defaultValue="Medium">
+                                  <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
+                                </select>
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Suggested review cadence</label>
+                                <input name="suggestedReviewCadence" className="form-input" defaultValue={(data.suggestedReviewCadence as string) ?? ""} />
+                              </div>
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Assumption statement <span style={{ color: "#b91c1c" }}>*</span></label>
+                              <textarea name="assumptionStatement" className="form-input" rows={2} required
+                                defaultValue={item.assumptionText ?? item.plainSummary} />
+                            </div>
+                            <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} />
+                            <div className="alert alert-warning" style={{ margin: "12px 0", fontSize: 12 }}>
+                              ⚠ This will create a live assumption. Review all fields carefully before confirming.
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-sm">Confirm and create assumption</button>
+                          </form>
+                        </details>
+                      )}
+
+                      {/* Create live tripwire */}
+                      {item.itemType === "tripwire" && (
+                        <details style={{ marginTop: 8 }}>
+                          <summary style={{ cursor: "pointer", fontSize: 13, color: "#1d4ed8", fontWeight: 600 }}>
+                            Create live tripwire from this item →
+                          </summary>
+                          <form action={confirmItemAsTripwire.bind(null, item.id)} style={{ marginTop: 12, background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Entity <span style={{ color: "#b91c1c" }}>*</span></label>
+                                <select name="entityId" className="form-input" required>
+                                  <option value="">— select entity —</option>
+                                  {entities.map(e => <option key={e.id} value={e.id}>{e.legalName}</option>)}
+                                </select>
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Trigger event <span style={{ color: "#b91c1c" }}>*</span></label>
+                                <input name="triggerEvent" className="form-input" required defaultValue={(data.triggerEvent as string) ?? ""} />
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Review date / deadline</label>
+                                <input name="reviewDateOrDeadline" type="date" className="form-input" defaultValue={(data.reviewDateOrDeadline as string) ?? ""} />
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Review cadence</label>
+                                <input name="reviewCadence" className="form-input" defaultValue={(data.reviewCadence as string) ?? ""} />
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Disarm condition</label>
+                                <input name="disarmCondition" className="form-input" defaultValue={(data.disarmCondition as string) ?? ""} />
+                              </div>
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Description <span style={{ color: "#b91c1c" }}>*</span></label>
+                              <textarea name="description" className="form-input" rows={2} required defaultValue={item.plainSummary} />
+                            </div>
+                            <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} />
+                            <div className="alert alert-warning" style={{ margin: "12px 0", fontSize: 12 }}>
+                              ⚠ This will create a live tripwire. Review all fields carefully before confirming.
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-sm">Confirm and create tripwire</button>
+                          </form>
+                        </details>
+                      )}
+
+                      {/* Link to an existing live record instead of creating a new one */}
+                      <details style={{ marginTop: 8 }}>
+                        <summary style={{ cursor: "pointer", fontSize: 13, color: "#4b5563", fontWeight: 600 }}>
+                          Link to an existing record →
+                        </summary>
+                        <form action={linkReviewItemToExisting.bind(null, item.id)} style={{ marginTop: 12, background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+                          <div className="form-row" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Record type</label>
+                            <select name="liveObjectType" className="form-input" required>
+                              <option value="ManualObligation">Obligation</option>
+                              <option value="Action">Action</option>
+                              <option value="Assumption">Assumption</option>
+                              <option value="Tripwire">Tripwire</option>
+                            </select>
+                          </div>
+                          <div className="form-row" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Record ID</label>
+                            <input name="liveObjectId" className="form-input" required placeholder="Existing record ID" />
+                          </div>
+                          <button type="submit" className="btn btn-secondary btn-sm">Link</button>
+                        </form>
+                      </details>
                     </div>
                   )}
                 </div>
@@ -334,6 +592,6 @@ export default async function ExtractionRunPage({
           </div>
         ))}
       </div>
-    </AppShell>
+    </>
   );
 }

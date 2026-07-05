@@ -13,14 +13,18 @@ model Organisation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users              User[]
-  entities           Entity[]
-  auditEvents        AuditEvent[]
-  manualObligations  ManualObligation[]
-  sourceSystems      SourceSystem[]
+  users               User[]
+  entities            Entity[]
+  auditEvents         AuditEvent[]
+  manualObligations   ManualObligation[]
+  sourceSystems       SourceSystem[]
   sourcePriorityRules SourcePriorityRule[]
-  sourceConflicts    SourceConflict[]
-  documents          Document[]
+  sourceConflicts     SourceConflict[]
+  documents           Document[]
+  reviewItems         ReviewItem[]
+  actions             Action[]
+  assumptions         Assumption[]
+  tripwires           Tripwire[]
 }
 
 model User {
@@ -107,6 +111,10 @@ model Entity {
   manualObligations ManualObligation[]
   sourceConflicts   SourceConflict[]
   documents         Document[]
+  reviewItems       ReviewItem[]
+  actions           Action[]
+  assumptions       Assumption[]
+  tripwires         Tripwire[]
 }
 
 model ObligationRule {
@@ -198,7 +206,7 @@ model ManualObligation {
   ruleId            String?
   calculationBasis  String?
   humanExplanation  String?
-  draftReviewStatus String?  // pending | activated | rejected | not_applicable
+  draftReviewStatus String? // pending | activated | rejected | not_applicable
   draftNote         String?
   generationBatchId String?
 
@@ -215,21 +223,115 @@ model ManualObligation {
   @@index([overallWorkflowStatus])
 }
 
-// ── Document Vault ────────────────────────────────────────────
+// ── Live objects created from confirmed review items ───────────
+// These are only ever created via an explicit human confirmation
+// of a draft ReviewItem — never written to directly by extraction.
 
-model Document {
+model Action {
   id             String       @id @default(cuid())
   organisationId String
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   entityId       String?
   entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  description             String
+  responsibleParty        String?
+  accountableParty        String?
+  externalOwner           String?
+  deadline                DateTime?
+  relativeDeadlineTrigger String?
+  relativeDeadlineOffset  String?
+  evidenceRequired        String?
+  conditionText           String?
+  status                  String    @default("Open") // Open | Done | Archived
+
+  sourceType              String?
+  sourceDocumentReference String?
+  sourcePageParagraph     String?
+  createdBy               String?
+  notes                   String?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([organisationId])
+  @@index([entityId])
+}
+
+model Assumption {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  assumptionStatement    String
+  factCategory           String?
+  relianceImportance     String  @default("Medium") // Low | Medium | High | Critical
+  suggestedReviewCadence String?
+  linkedCaveat           String?
+  conditionText          String?
+  status                 String  @default("Active") // Active | Superseded | Archived
+
+  sourceType              String?
+  sourceDocumentReference String?
+  sourcePageParagraph     String?
+  createdBy               String?
+  notes                   String?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([organisationId])
+  @@index([entityId])
+}
+
+model Tripwire {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  description          String
+  triggerEvent         String
+  reviewDateOrDeadline DateTime?
+  reviewCadence        String?
+  disarmCondition      String?
+  conditionText        String?
+  status               String    @default("Armed") // Armed | Disarmed | Archived
+
+  sourceType              String?
+  sourceDocumentReference String?
+  sourcePageParagraph     String?
+  createdBy               String?
+  notes                   String?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([organisationId])
+  @@index([entityId])
+}
+
+// ── Document Vault ────────────────────────────────────────────
+
+model Document {
+  id             String        @id @default(cuid())
+  organisationId String
+  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
   obligationId   String?
   sourceSystemId String?
   sourceSystem   SourceSystem? @relation("DocumentSourceSystem", fields: [sourceSystemId], references: [id])
 
   // File metadata
   filename    String
-  fileType    String   // pdf | docx
+  fileType    String // pdf | docx
   fileSize    Int
   contentHash String
   storageKey  String
@@ -237,16 +339,16 @@ model Document {
   uploadedBy  String?
 
   // Document classification
-  documentType  String
-  documentDate  DateTime?
-  periodStart   DateTime?
-  periodEnd     DateTime?
-  adviserName   String?
-  versionLabel  String?
-  status        String    @default("Uploaded") // Uploaded | Text extracted | Extraction failed | Archived
+  documentType String
+  documentDate DateTime?
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  adviserName  String?
+  versionLabel String?
+  status       String    @default("Uploaded") // Uploaded | Text extracted | Extraction failed | Archived
 
   // Security & sensitivity
-  sensitivityLevel        String  @default("Low")     // Low | Medium | High | Highly confidential
+  sensitivityLevel        String  @default("Low") // Low | Medium | High | Highly confidential
   privilegeStatus         String  @default("Unknown") // Not privileged | Potentially privileged | Legally privileged | Unknown
   containsPersonalData    String  @default("Unknown") // Yes | No | Unknown
   containsSpecialCategory String  @default("Unknown")
@@ -256,18 +358,18 @@ model Document {
   accessNotes             String?
 
   // Source & reliance
-  isAuthoritativeSource  String @default("Unknown") // Yes | No | Unknown
-  sourceConfidence       String @default("Unknown") // High | Medium | Low | Unknown
+  isAuthoritativeSource  String  @default("Unknown") // Yes | No | Unknown
+  sourceConfidence       String  @default("Unknown") // High | Medium | Low | Unknown
   supersedesDocumentId   String?
   supersededByDocumentId String?
-  relianceStatus         String @default("Draft") // Draft | Under review | Approved for reliance | Superseded | Do not rely
+  relianceStatus         String  @default("Draft") // Draft | Under review | Approved for reliance | Superseded | Do not rely
 
   // Extraction
   extractionError String?
 
   archivedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   chunks         DocumentChunk[]
   healthFlags    DocumentHealthFlag[]
@@ -313,17 +415,17 @@ model ExtractionRun {
   documentId     String
   document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  modelProvider        String  @default("openai")
-  modelName            String  @default("gpt-4o")
-  promptVersion        String  @default("1")
+  modelProvider           String @default("openai")
+  modelName               String @default("gpt-4o")
+  promptVersion           String @default("1")
   extractionSchemaVersion String @default("1")
 
-  startedAt          DateTime  @default(now())
-  completedAt        DateTime?
-  status             String    @default("Pending") // Pending | Running | Completed | Failed | Partially failed
-  errorMessage       String?
-  totalChunksProcessed Int     @default(0)
-  createdBy          String?
+  startedAt            DateTime  @default(now())
+  completedAt          DateTime?
+  status               String    @default("Pending") // Pending | Running | Completed | Failed | Partially failed
+  errorMessage         String?
+  totalChunksProcessed Int       @default(0)
+  createdBy            String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -342,12 +444,13 @@ model ReviewItem {
   documentId      String
   document        Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
   entityId        String?
+  entity          Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
 
   // What was extracted
-  itemType          String // obligation | action | assumption | caveat | tripwire | evidence | valuation | rd | capital_allowances | conflict
-  structuredJson    Json
-  plainSummary      String
-  confidenceScore   Float   @default(0)
+  itemType        String // obligation | action | assumption | caveat | tripwire | evidence | valuation | rd | capital_allowances | conflict
+  structuredJson  Json
+  plainSummary    String
+  confidenceScore Float  @default(0)
 
   // Source provenance
   sourceChunkId     String?
@@ -355,12 +458,12 @@ model ReviewItem {
   sourceTextExcerpt String?
 
   // Conditions / caveats
-  conditionText  String?
-  assumptionText String?
-  caveatText     String?
-  isConditional  Boolean @default(false)
-  isDraft        Boolean @default(false)
-  requiresHumanTaxReview    Boolean @default(true)
+  conditionText              String?
+  assumptionText             String?
+  caveatText                 String?
+  isConditional              Boolean @default(false)
+  isDraft                    Boolean @default(false)
+  requiresHumanTaxReview     Boolean @default(true)
   requiresSourceVerification Boolean @default(false)
 
   // Suggested fields (for creating live objects)
@@ -370,20 +473,23 @@ model ReviewItem {
   suggestedOwner            String?
   suggestedEvidenceRequired String?
   suggestedSourceSystemId   String?
+  suggestedSourceSystem     SourceSystem? @relation(fields: [suggestedSourceSystemId], references: [id], onDelete: SetNull)
 
   // Review workflow
-  reviewStatus  String  @default("Needs review") // Needs review | In review | Confirmed | Edited and confirmed | Rejected | Duplicate | Not applicable | Needs adviser input | Needs source verification
-  reviewedBy    String?
-  reviewedAt    DateTime?
-  reviewerNotes String?
+  reviewStatus    String    @default("Needs review") // Needs review | In review | Confirmed | Edited and confirmed | Rejected | Duplicate | Not applicable | Needs adviser input | Needs source verification
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewerNotes   String?
   rejectionReason String?
 
   // Link to live object created from this item
   createdLiveObjectType String?
   createdLiveObjectId   String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  Organisation   Organisation? @relation(fields: [organisationId], references: [id])
+  organisationId String?
 
   @@index([extractionRunId])
   @@index([documentId])
@@ -398,28 +504,29 @@ model SourceSystem {
   organisationId String
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
 
-  name                  String
-  systemType            String
-  description           String?
-  owner                 String?
-  department            String?
-  externalProvider      String?
-  accessMethod          String?
-  refreshFrequency      String?
+  name                   String
+  systemType             String
+  description            String?
+  owner                  String?
+  department             String?
+  externalProvider       String?
+  accessMethod           String?
+  refreshFrequency       String?
   containsPersonalData   Boolean @default(false)
   containsPrivilegedData Boolean @default(false)
-  status                String  @default("Active") // Active | Planned | Archived
+  status                 String  @default("Active") // Active | Planned | Archived
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  priorityRulesAuth      SourcePriorityRule[] @relation("AuthoritativeSource")
-  priorityRulesSecondary SourcePriorityRule[] @relation("SecondarySource")
-  priorityRulesTertiary  SourcePriorityRule[] @relation("TertiarySource")
-  conflictsAsA           SourceConflict[]     @relation("ConflictSourceA")
-  conflictsAsB           SourceConflict[]     @relation("ConflictSourceB")
-  obligationSourceRefs   ObligationSourceRef[]
-  documents              Document[]           @relation("DocumentSourceSystem")
+  priorityRulesAuth       SourcePriorityRule[]  @relation("AuthoritativeSource")
+  priorityRulesSecondary  SourcePriorityRule[]  @relation("SecondarySource")
+  priorityRulesTertiary   SourcePriorityRule[]  @relation("TertiarySource")
+  conflictsAsA            SourceConflict[]      @relation("ConflictSourceA")
+  conflictsAsB            SourceConflict[]      @relation("ConflictSourceB")
+  obligationSourceRefs    ObligationSourceRef[]
+  documents               Document[]            @relation("DocumentSourceSystem")
+  suggestedForReviewItems ReviewItem[]
 
   @@index([organisationId])
 }
@@ -513,7 +620,7 @@ model ObligationSourceRef {
   pageOrChunk       String?
   isAuthoritative   Boolean   @default(false)
   overrideReason    String?
-  confidence        String?   // High | Medium | Low
+  confidence        String? // High | Medium | Low
   lastVerifiedAt    DateTime?
   nextReviewAt      DateTime?
 
@@ -522,18 +629,18 @@ model ObligationSourceRef {
 }
 
 model AuditEvent {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organisationId String
-  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   userId         String?
-  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   entityId       String?
-  entity         Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
   obligationId   String?
-  obligation     Obligation?   @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
   action         String
   detail         String?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([organisationId])
   @@index([entityId])

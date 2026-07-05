@@ -44,11 +44,11 @@ export const REVIEW_STATUSES = [
 
 const baseFields = z.object({
   sourceText: z.string(),
-  sourceChunkPage: z.string().optional(),
+  sourceChunkPage: z.string().nullable().optional(),
   confidenceScore: z.number().min(0).max(1),
   isConditional: z.boolean(),
-  conditionText: z.string().optional(),
-  isDraft: z.boolean().optional(),
+  conditionText: z.string().nullable().optional(),
+  isDraft: z.boolean().nullable().optional(),
   requiresHumanTaxReview: z.boolean(),
   requiresSourceVerification: z.boolean(),
 });
@@ -57,64 +57,64 @@ export const ObligationSchema = baseFields.extend({
   regime: z.string(),
   obligationType: z.string(),
   description: z.string(),
-  filingDeadline: z.string().optional(),
-  paymentDeadline: z.string().optional(),
-  periodStart: z.string().optional(),
-  periodEnd: z.string().optional(),
-  recurrence: z.string().optional(),
-  statutoryBasis: z.string().optional(),
-  evidenceRequired: z.string().optional(),
-  suggestedOwner: z.string().optional(),
+  filingDeadline: z.string().nullable().optional(),
+  paymentDeadline: z.string().nullable().optional(),
+  periodStart: z.string().nullable().optional(),
+  periodEnd: z.string().nullable().optional(),
+  recurrence: z.string().nullable().optional(),
+  statutoryBasis: z.string().nullable().optional(),
+  evidenceRequired: z.string().nullable().optional(),
+  suggestedOwner: z.string().nullable().optional(),
 });
 
 export const ActionSchema = baseFields.extend({
   description: z.string(),
-  responsibleParty: z.string().optional(),
-  accountableParty: z.string().optional(),
-  externalOwner: z.string().optional(),
-  deadline: z.string().optional(),
-  relativeDeadlineTrigger: z.string().optional(),
-  relativeDeadlineOffset: z.string().optional(),
-  evidenceRequired: z.string().optional(),
+  responsibleParty: z.string().nullable().optional(),
+  accountableParty: z.string().nullable().optional(),
+  externalOwner: z.string().nullable().optional(),
+  deadline: z.string().nullable().optional(),
+  relativeDeadlineTrigger: z.string().nullable().optional(),
+  relativeDeadlineOffset: z.string().nullable().optional(),
+  evidenceRequired: z.string().nullable().optional(),
 });
 
 export const AssumptionSchema = baseFields.extend({
   assumptionStatement: z.string(),
-  factCategory: z.string().optional(),
+  factCategory: z.string().nullable().optional(),
   relianceImportance: z.enum(["Low", "Medium", "High", "Critical"]),
-  suggestedReviewCadence: z.string().optional(),
-  linkedCaveat: z.string().optional(),
+  suggestedReviewCadence: z.string().nullable().optional(),
+  linkedCaveat: z.string().nullable().optional(),
 });
 
 export const CaveatSchema = baseFields.extend({
   caveatText: z.string(),
-  relatedTopic: z.string().optional(),
-  relatedItem: z.string().optional(),
-  impactIfFalseOrUnresolved: z.string().optional(),
+  relatedTopic: z.string().nullable().optional(),
+  relatedItem: z.string().nullable().optional(),
+  impactIfFalseOrUnresolved: z.string().nullable().optional(),
 });
 
 export const TripwireSchema = baseFields.extend({
   description: z.string(),
   triggerEvent: z.string(),
-  reviewDateOrDeadline: z.string().optional(),
-  reviewCadence: z.string().optional(),
-  disarmCondition: z.string().optional(),
+  reviewDateOrDeadline: z.string().nullable().optional(),
+  reviewCadence: z.string().nullable().optional(),
+  disarmCondition: z.string().nullable().optional(),
 });
 
 export const EvidenceSchema = baseFields.extend({
   description: z.string(),
-  evidenceType: z.string().optional(),
-  linkedObligation: z.string().optional(),
-  owner: z.string().optional(),
-  deadline: z.string().optional(),
+  evidenceType: z.string().nullable().optional(),
+  linkedObligation: z.string().nullable().optional(),
+  owner: z.string().nullable().optional(),
+  deadline: z.string().nullable().optional(),
 });
 
 export const ValuationSchema = baseFields.extend({
   description: z.string(),
-  assetOrShareClass: z.string().optional(),
-  valuationDate: z.string().optional(),
-  valuer: z.string().optional(),
-  purpose: z.string().optional(),
+  assetOrShareClass: z.string().nullable().optional(),
+  valuationDate: z.string().nullable().optional(),
+  valuer: z.string().nullable().optional(),
+  purpose: z.string().nullable().optional(),
 });
 
 export const RdSchema = baseFields.extend({
@@ -124,7 +124,7 @@ export const RdSchema = baseFields.extend({
   technicalEvidenceRequired: z.boolean(),
   adviserReviewRequired: z.boolean(),
   ct600LinkageMentioned: z.boolean(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const CapitalAllowancesSchema = baseFields.extend({
@@ -134,14 +134,14 @@ export const CapitalAllowancesSchema = baseFields.extend({
   fullExpensingMentioned: z.boolean(),
   specialRatePoolMentioned: z.boolean(),
   ct600LinkageMentioned: z.boolean(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const ConflictSchema = baseFields.extend({
   description: z.string(),
-  conflictingValues: z.array(z.string()).optional(),
-  severityAssessment: z.string().optional(),
-  resolutionSuggestion: z.string().optional(),
+  conflictingValues: z.array(z.string()).nullable().optional(),
+  severityAssessment: z.string().nullable().optional(),
+  resolutionSuggestion: z.string().nullable().optional(),
 });
 
 // Union discriminator
@@ -161,7 +161,7 @@ export const ExtractedItemSchema = z.discriminatedUnion("itemType", [
 export const ExtractionResponseSchema = z.object({
   items: z.array(ExtractedItemSchema),
   documentAppearsToBeFinished: z.boolean(),
-  overallNotes: z.string().optional(),
+  overallNotes: z.string().nullable().optional(),
 });
 
 export type ExtractedItem = z.infer<typeof ExtractedItemSchema>;

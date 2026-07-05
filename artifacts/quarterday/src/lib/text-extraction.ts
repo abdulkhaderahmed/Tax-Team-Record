@@ -45,13 +45,20 @@ export async function extractText(
   try {
     if (fileType === "pdf") {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string; numpages: number }>;
-      const result = await pdfParse(buffer);
-      const chunk: TextChunk = { chunkIndex: 0, text: result.text.trim() };
-      return {
-        chunks: [chunk],
-        healthFlags: extractHealthFlags(chunk.text, 0),
+      const { PDFParse } = require("pdf-parse") as {
+        PDFParse: new (opts: { data: Buffer }) => { getText(): Promise<{ text: string }>; destroy(): Promise<void> };
       };
+      const parser = new PDFParse({ data: buffer });
+      try {
+        const result = await parser.getText();
+        const chunk: TextChunk = { chunkIndex: 0, text: result.text.trim() };
+        return {
+          chunks: [chunk],
+          healthFlags: extractHealthFlags(chunk.text, 0),
+        };
+      } finally {
+        await parser.destroy();
+      }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mammoth = require("mammoth") as {
