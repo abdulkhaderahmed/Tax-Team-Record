@@ -1,33 +1,21 @@
 "use client";
 
-import {
-  REGIMES,
-  OBLIGATION_TYPES,
-  STATUS_VALUES,
-  RISK_LEVELS,
-  SOURCE_TYPES,
-  RECURRENCES,
-} from "../_constants";
+import { RISK_LEVELS, SOURCE_TYPES } from "@/app/obligations/_constants";
+import { ACTION_STATUS_VALUES } from "../_constants";
 import { REQUIREMENT_FLAG_LABELS } from "@/lib/raci-constants";
 
 export type EntityOption = { id: string; legalName: string };
 
-export type ManualObligationFormValues = {
+export type ActionFormValues = {
   entityId?: string | null;
-  regime?: string;
-  obligationType?: string;
   description?: string;
-  statutoryBasis?: string | null;
-  filingDeadline?: string;
-  paymentDeadline?: string;
-  internalTargetDate?: string;
-  recurrence?: string | null;
-  periodStart?: string;
-  periodEnd?: string;
-  source?: string | null;
+  deadline?: string;
+  relativeDeadlineTrigger?: string | null;
+  relativeDeadlineOffset?: string | null;
+  conditionText?: string | null;
 
-  responsibleOwner?: string | null;
-  accountableOwner?: string | null;
+  responsibleParty?: string | null;
+  accountableParty?: string | null;
   consultedParty?: string | null;
   informedParty?: string | null;
   externalAdviser?: string | null;
@@ -48,15 +36,12 @@ export type ManualObligationFormValues = {
   evidenceStatus?: string;
   filingSubmissionStatus?: string;
   paymentStatus?: string;
-  overallWorkflowStatus?: string;
+  overallStatus?: string;
 
   evidenceRequired?: boolean;
   evidenceDescription?: string | null;
-  evidenceFileLink?: string | null;
-  evidenceOwner?: string | null;
 
   riskLevel?: string | null;
-  consequenceOfMissingDeadline?: string | null;
   openIssueBlocker?: string | null;
   notes?: string | null;
   exceptionRequired?: boolean;
@@ -65,15 +50,24 @@ export type ManualObligationFormValues = {
   sourceDocumentReference?: string | null;
   sourcePageParagraph?: string | null;
   createdBy?: string | null;
-  lastUpdatedBy?: string | null;
 };
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
-  defaultValues?: ManualObligationFormValues;
+  defaultValues?: ActionFormValues;
   entities: EntityOption[];
   cancelHref: string;
   submitLabel?: string;
+};
+
+const REQUIREMENT_FLAG_DEFAULTS: Record<string, boolean> = {
+  dataCollectionRequired: false,
+  dataValidationRequired: false,
+  technicalReviewRequired: false,
+  accountableApprovalRequired: true,
+  evidenceRequired: false,
+  filingSubmissionRequired: false,
+  paymentRequired: false,
 };
 
 function StatusSelect({
@@ -89,7 +83,7 @@ function StatusSelect({
     <div className="form-group">
       <label htmlFor={name}>{label}</label>
       <select id={name} name={name} defaultValue={defaultValue ?? "Not started"}>
-        {STATUS_VALUES.map((s) => (
+        {ACTION_STATUS_VALUES.map((s) => (
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
@@ -97,17 +91,17 @@ function StatusSelect({
   );
 }
 
-export function ManualObligationForm({
+export function ActionForm({
   action,
   defaultValues: d = {},
   entities,
   cancelHref,
-  submitLabel = "Save Obligation",
+  submitLabel = "Save Action",
 }: Props) {
   return (
     <form action={action} className="form-page">
 
-      {/* ── 1. Entity & Core ─────────────────────────────── */}
+      {/* ── 1. Core details ──────────────────────────────── */}
       <div className="panel">
         <h2>Core details</h2>
         <div className="form-grid">
@@ -125,108 +119,55 @@ export function ManualObligationForm({
           </div>
 
           <div className="form-group">
-            <label htmlFor="regime">Regime *</label>
-            <select id="regime" name="regime" required defaultValue={d.regime ?? ""}>
-              <option value="">— select —</option>
-              {REGIMES.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+            <label htmlFor="deadline">Deadline</label>
+            <input type="date" id="deadline" name="deadline"
+              defaultValue={d.deadline ?? ""} />
           </div>
 
           <div className="form-group">
-            <label htmlFor="obligationType">Obligation type *</label>
-            <select id="obligationType" name="obligationType" required defaultValue={d.obligationType ?? ""}>
-              <option value="">— select —</option>
-              {OBLIGATION_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <label htmlFor="relativeDeadlineTrigger">Relative deadline trigger</label>
+            <input type="text" id="relativeDeadlineTrigger" name="relativeDeadlineTrigger"
+              defaultValue={d.relativeDeadlineTrigger ?? ""}
+              placeholder="e.g. Filing deadline for CT600" />
           </div>
 
           <div className="form-group">
-            <label htmlFor="source">Source (brief)</label>
-            <input type="text" id="source" name="source"
-              defaultValue={d.source ?? ""} placeholder="e.g. HMRC guidance, adviser note" />
+            <label htmlFor="relativeDeadlineOffset">Relative deadline offset</label>
+            <input type="text" id="relativeDeadlineOffset" name="relativeDeadlineOffset"
+              defaultValue={d.relativeDeadlineOffset ?? ""}
+              placeholder="e.g. 10 business days before" />
           </div>
 
           <div className="form-group span2">
             <label htmlFor="description">Description *</label>
             <textarea id="description" name="description" rows={3} required
               defaultValue={d.description ?? ""}
-              placeholder="Describe this obligation clearly" />
+              placeholder="Describe this action clearly" />
           </div>
 
           <div className="form-group span2">
-            <label htmlFor="statutoryBasis">Statutory basis</label>
-            <input type="text" id="statutoryBasis" name="statutoryBasis"
-              defaultValue={d.statutoryBasis ?? ""}
-              placeholder="e.g. CTA 2009 s.1" />
+            <label htmlFor="conditionText">Condition</label>
+            <textarea id="conditionText" name="conditionText" rows={2}
+              defaultValue={d.conditionText ?? ""}
+              placeholder="e.g. Only applies if R&D claim is being made" />
           </div>
         </div>
       </div>
 
-      {/* ── 2. Dates & Recurrence ────────────────────────── */}
-      <div className="panel">
-        <h2>Dates &amp; Recurrence</h2>
-        <div className="form-grid">
-          <div className="form-group">
-            <label htmlFor="filingDeadline">Filing deadline</label>
-            <input type="date" id="filingDeadline" name="filingDeadline"
-              defaultValue={d.filingDeadline ?? ""} />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="paymentDeadline">Payment deadline</label>
-            <input type="date" id="paymentDeadline" name="paymentDeadline"
-              defaultValue={d.paymentDeadline ?? ""} />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="internalTargetDate">Internal target date</label>
-            <input type="date" id="internalTargetDate" name="internalTargetDate"
-              defaultValue={d.internalTargetDate ?? ""} />
-            <div className="form-hint">Earlier internal deadline before statutory due date</div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="recurrence">Recurrence</label>
-            <select id="recurrence" name="recurrence" defaultValue={d.recurrence ?? ""}>
-              <option value="">— select —</option>
-              {RECURRENCES.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="periodStart">Period start</label>
-            <input type="date" id="periodStart" name="periodStart"
-              defaultValue={d.periodStart ?? ""} />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="periodEnd">Period end</label>
-            <input type="date" id="periodEnd" name="periodEnd"
-              defaultValue={d.periodEnd ?? ""} />
-          </div>
-        </div>
-      </div>
-
-      {/* ── 3. Ownership / RACI ──────────────────────────── */}
+      {/* ── 2. Ownership / RACI ──────────────────────────── */}
       <div className="panel">
         <h2>Ownership</h2>
         <div className="form-grid">
           <div className="form-group">
-            <label htmlFor="responsibleOwner">Responsible owner</label>
-            <input type="text" id="responsibleOwner" name="responsibleOwner"
-              defaultValue={d.responsibleOwner ?? ""} placeholder="Does the work" />
+            <label htmlFor="responsibleParty">Responsible party</label>
+            <input type="text" id="responsibleParty" name="responsibleParty"
+              defaultValue={d.responsibleParty ?? ""} placeholder="Does the work" />
           </div>
 
           <div className="form-group">
-            <label htmlFor="accountableOwner">Accountable owner</label>
-            <input type="text" id="accountableOwner" name="accountableOwner"
-              defaultValue={d.accountableOwner ?? ""} placeholder="Accountable for outcome" />
+            <label htmlFor="accountableParty">Accountable party</label>
+            <input type="text" id="accountableParty" name="accountableParty"
+              defaultValue={d.accountableParty ?? ""} placeholder="Accountable for outcome" />
           </div>
 
           <div className="form-group">
@@ -255,32 +196,29 @@ export function ManualObligationForm({
         </div>
         <div className="form-hint" style={{ marginTop: 8 }}>
           For multiple consulted/informed parties with full contact details, add them from the
-          Ownership and Controls section on the obligation&apos;s detail page once it&apos;s saved.
+          Ownership and Controls section on the action&apos;s detail page once it&apos;s saved.
         </div>
       </div>
 
-      {/* ── 4. Requirement flags ─────────────────────────── */}
+      {/* ── 3. Requirement flags ─────────────────────────── */}
       <div className="panel">
-        <h2>What does this obligation actually require?</h2>
+        <h2>What does this action actually require?</h2>
         <div className="form-hint" style={{ marginBottom: 12 }}>
-          Not every obligation needs every step below — untick anything that doesn&apos;t apply so
+          Not every action needs every step below — untick anything that doesn&apos;t apply so
           the overall status isn&apos;t blocked waiting on something irrelevant.
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px" }}>
-          {(Object.keys(REQUIREMENT_FLAG_LABELS) as Array<keyof typeof REQUIREMENT_FLAG_LABELS>).map((key) => {
-            const defaultForNew = key === "paymentRequired" || key === "evidenceRequired" ? false : true;
-            return (
+          {(Object.keys(REQUIREMENT_FLAG_LABELS) as Array<keyof typeof REQUIREMENT_FLAG_LABELS>).map((key) => (
             <div className="checkbox-row" key={key} style={{ marginBottom: 0 }}>
               <input type="checkbox" id={key} name={key}
-                defaultChecked={(d[key as keyof ManualObligationFormValues] as boolean) ?? defaultForNew} />
+                defaultChecked={(d[key as keyof ActionFormValues] as boolean) ?? REQUIREMENT_FLAG_DEFAULTS[key]} />
               <label htmlFor={key}>{REQUIREMENT_FLAG_LABELS[key]}</label>
             </div>
-            );
-          })}
+          ))}
         </div>
       </div>
 
-      {/* ── 5. Status ────────────────────────────────────── */}
+      {/* ── 4. Status ────────────────────────────────────── */}
       <div className="panel">
         <h2>Status</h2>
         <div className="form-grid">
@@ -306,12 +244,12 @@ export function ManualObligationForm({
             <label htmlFor="overallStatusOverride">Overall status override</label>
             <select id="overallStatusOverride" name="overallStatusOverride" defaultValue="">
               <option value="">— let the system compute it —</option>
-              {STATUS_VALUES.map((s) => (
+              {ACTION_STATUS_VALUES.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
             <div className="form-hint">
-              Current: {d.overallWorkflowStatus ?? "Not started"}. Leave blank to recompute
+              Current: {d.overallStatus ?? "Not started"}. Leave blank to recompute
               automatically from the statuses above; pick a value to override it manually.
             </div>
           </div>
@@ -326,29 +264,12 @@ export function ManualObligationForm({
       {/* ── 5. Evidence ──────────────────────────────────── */}
       <div className="panel">
         <h2>Evidence</h2>
-        <div className="form-hint" style={{ marginBottom: 16 }}>
-          Whether evidence is required is set via the &quot;Evidence required&quot; flag above.
-        </div>
-
         <div className="form-grid">
           <div className="form-group span2">
             <label htmlFor="evidenceDescription">Evidence description</label>
             <textarea id="evidenceDescription" name="evidenceDescription" rows={2}
               defaultValue={d.evidenceDescription ?? ""}
               placeholder="Describe the evidence needed" />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="evidenceFileLink">Evidence file link / reference</label>
-            <input type="text" id="evidenceFileLink" name="evidenceFileLink"
-              defaultValue={d.evidenceFileLink ?? ""}
-              placeholder="URL or document reference" />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="evidenceOwner">Evidence owner</label>
-            <input type="text" id="evidenceOwner" name="evidenceOwner"
-              defaultValue={d.evidenceOwner ?? ""} placeholder="Who holds the evidence" />
           </div>
         </div>
       </div>
@@ -373,13 +294,6 @@ export function ManualObligationForm({
                 defaultChecked={d.exceptionRequired ?? false} />
               <label htmlFor="exceptionRequired">Exception required</label>
             </div>
-          </div>
-
-          <div className="form-group span2">
-            <label htmlFor="consequenceOfMissingDeadline">Consequence of missing deadline</label>
-            <textarea id="consequenceOfMissingDeadline" name="consequenceOfMissingDeadline" rows={2}
-              defaultValue={d.consequenceOfMissingDeadline ?? ""}
-              placeholder="e.g. Penalty, interest, HMRC enquiry" />
           </div>
 
           <div className="form-group span2">
@@ -428,12 +342,6 @@ export function ManualObligationForm({
             <label htmlFor="createdBy">Created by</label>
             <input type="text" id="createdBy" name="createdBy"
               defaultValue={d.createdBy ?? ""} placeholder="Your name" />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="lastUpdatedBy">Last updated by</label>
-            <input type="text" id="lastUpdatedBy" name="lastUpdatedBy"
-              defaultValue={d.lastUpdatedBy ?? ""} placeholder="Updater name" />
           </div>
         </div>
       </div>

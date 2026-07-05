@@ -2,13 +2,10 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fmtDate } from "@/lib/obligations";
-import { REGIMES, STATUS_VALUES, RISK_LEVELS } from "./_constants";
+import { RISK_LEVELS } from "@/app/obligations/_constants";
+import { ACTION_STATUS_VALUES } from "./_constants";
 
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
+const ORG_ID = "demo-org";
 
 function statusBadgeClass(status: string): string {
   if (status === "Complete" || status === "Approved" || status === "Submitted" || status === "Paid") return "badge-green";
@@ -40,15 +37,13 @@ function dueDateClass(date: Date | null): string {
   return "";
 }
 
-export default async function ObligationsPage({
+export default async function ActionsRegisterPage({
   searchParams,
 }: {
   searchParams: Promise<{
     entity?: string;
-    regime?: string;
     status?: string;
     risk?: string;
-    due?: string;
     owner?: string;
     q?: string;
     archived?: string;
@@ -56,73 +51,56 @@ export default async function ObligationsPage({
 }) {
   const sp = await searchParams;
   const showArchived = sp.archived === "1";
-  const now = new Date();
 
-  const org = await prisma.organisation.findFirst();
+  const org = await prisma.organisation.findFirst({ where: { id: ORG_ID } }) ?? await prisma.organisation.findFirst();
   const entities = org
     ? await prisma.entity.findMany({ where: { organisationId: org.id }, orderBy: { legalName: "asc" } })
     : [];
 
-  const conditions: Prisma.ManualObligationWhereInput[] = [
+  const conditions: Prisma.ActionWhereInput[] = [
     { organisationId: org?.id ?? "" },
     { archivedAt: showArchived ? { not: null } : null },
-    // Exclude pending/rejected/N/A drafts — only show manually-created or activated obligations
-    {
-      OR: [
-        { draftReviewStatus: null },
-        { draftReviewStatus: "activated" },
-      ],
-    },
   ];
 
   if (sp.entity) conditions.push({ entityId: sp.entity });
-  if (sp.regime) conditions.push({ regime: sp.regime });
-  if (sp.status) conditions.push({ overallWorkflowStatus: sp.status });
+  if (sp.status) conditions.push({ overallStatus: sp.status });
   if (sp.risk) conditions.push({ riskLevel: sp.risk });
-  if (sp.owner) conditions.push({ responsibleOwner: { contains: sp.owner, mode: "insensitive" } });
-  if (sp.q) {
+  if (sp.owner) {
     conditions.push({
       OR: [
-        { description: { contains: sp.q, mode: "insensitive" } },
-        { statutoryBasis: { contains: sp.q, mode: "insensitive" } },
+        { responsibleParty: { contains: sp.owner, mode: "insensitive" } },
+        { accountableParty: { contains: sp.owner, mode: "insensitive" } },
       ],
     });
   }
-  if (sp.due === "overdue") conditions.push({ filingDeadline: { lt: now } });
-  else if (sp.due === "7d") conditions.push({ filingDeadline: { gte: now, lte: addDays(now, 7) } });
-  else if (sp.due === "30d") conditions.push({ filingDeadline: { gte: now, lte: addDays(now, 30) } });
-  else if (sp.due === "90d") conditions.push({ filingDeadline: { gte: now, lte: addDays(now, 90) } });
+  if (sp.q) {
+    conditions.push({ description: { contains: sp.q, mode: "insensitive" } });
+  }
 
-  const obligations = await prisma.manualObligation.findMany({
+  const actions = await prisma.action.findMany({
     where: { AND: conditions },
     include: { entity: { select: { id: true, legalName: true } } },
-    orderBy: [{ filingDeadline: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
     take: 250,
   });
 
-  const hasFilters = !!(sp.entity || sp.regime || sp.status || sp.risk || sp.due || sp.owner || sp.q);
+  const hasFilters = !!(sp.entity || sp.status || sp.risk || sp.owner || sp.q);
 
   return (
     <>
       <div className="page-header">
         <div>
           <div className="breadcrumb">
-            <Link href="/">Dashboard</Link> / Obligation Register
+            <Link href="/">Dashboard</Link> / Actions Register
           </div>
-          <h1>Obligation Register</h1>
+          <h1>Actions Register</h1>
         </div>
-        <Link href="/obligations/new" className="btn btn-primary">+ New Obligation</Link>
-      </div>
-
-      {/* Tab switcher */}
-      <div className="tab-bar">
-        <Link href="/obligations" className="tab tab-active">List</Link>
-        <Link href="/obligations/calendar" className="tab">Calendar</Link>
+        <Link href="/actions-register/new" className="btn btn-primary">+ New Action</Link>
       </div>
 
       {/* Filter bar */}
       <div className="panel" style={{ padding: "14px 20px", marginBottom: 16 }}>
-        <form method="GET" action="/obligations">
+        <form method="GET" action="/actions-register">
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 16px", alignItems: "flex-end" }}>
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>Entity</label>
@@ -135,20 +113,10 @@ export default async function ObligationsPage({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>Regime</label>
-              <select name="regime" defaultValue={sp.regime ?? ""} style={{ fontSize: 12, padding: "5px 8px" }}>
-                <option value="">All regimes</option>
-                {REGIMES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>Overall status</label>
               <select name="status" defaultValue={sp.status ?? ""} style={{ fontSize: 12, padding: "5px 8px" }}>
                 <option value="">Any status</option>
-                {STATUS_VALUES.map((s) => (
+                {ACTION_STATUS_VALUES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -165,41 +133,30 @@ export default async function ObligationsPage({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>Filing due</label>
-              <select name="due" defaultValue={sp.due ?? ""} style={{ fontSize: 12, padding: "5px 8px" }}>
-                <option value="">Any date</option>
-                <option value="overdue">Overdue</option>
-                <option value="7d">Due in 7 days</option>
-                <option value="30d">Due in 30 days</option>
-                <option value="90d">Due in 90 days</option>
-              </select>
-            </div>
-
-            <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>Owner</label>
               <input type="text" name="owner" defaultValue={sp.owner ?? ""}
-                placeholder="Responsible owner" style={{ fontSize: 12, padding: "5px 8px", width: 140 }} />
+                placeholder="Responsible or accountable owner" style={{ fontSize: 12, padding: "5px 8px", width: 180 }} />
             </div>
 
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>Search</label>
               <input type="text" name="q" defaultValue={sp.q ?? ""}
-                placeholder="Description or statutory basis" style={{ fontSize: 12, padding: "5px 8px", width: 200 }} />
+                placeholder="Description" style={{ fontSize: 12, padding: "5px 8px", width: 200 }} />
             </div>
 
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3 }}>View</label>
               <div style={{ display: "flex", gap: 6 }}>
                 {showArchived
-                  ? <a href="/obligations" className="btn btn-secondary btn-sm">Active</a>
-                  : <a href="/obligations?archived=1" className="btn btn-secondary btn-sm">Archived</a>}
+                  ? <a href="/actions-register" className="btn btn-secondary btn-sm">Active</a>
+                  : <a href="/actions-register?archived=1" className="btn btn-secondary btn-sm">Archived</a>}
               </div>
             </div>
 
             <div style={{ display: "flex", gap: 6 }}>
               <button type="submit" className="btn btn-primary btn-sm">Apply</button>
               {hasFilters && (
-                <a href={showArchived ? "/obligations?archived=1" : "/obligations"} className="btn btn-secondary btn-sm">
+                <a href={showArchived ? "/actions-register?archived=1" : "/actions-register"} className="btn btn-secondary btn-sm">
                   Clear
                 </a>
               )}
@@ -209,21 +166,21 @@ export default async function ObligationsPage({
       </div>
 
       {/* Table */}
-      {obligations.length === 0 ? (
+      {actions.length === 0 ? (
         <div className="panel" style={{ textAlign: "center", padding: "48px 24px" }}>
           <p style={{ color: "#6b7280", marginBottom: 16 }}>
             {hasFilters || showArchived
-              ? "No obligations match the current filters."
-              : "No obligations yet. Create the first one to get started."}
+              ? "No actions match the current filters."
+              : "No actions yet. Create the first one to get started."}
           </p>
           {!hasFilters && !showArchived && (
-            <Link href="/obligations/new" className="btn btn-primary">+ New Obligation</Link>
+            <Link href="/actions-register/new" className="btn btn-primary">+ New Action</Link>
           )}
         </div>
       ) : (
         <>
           <p className="text-sm text-muted" style={{ marginBottom: 8 }}>
-            {obligations.length} obligation{obligations.length !== 1 ? "s" : ""}
+            {actions.length} action{actions.length !== 1 ? "s" : ""}
             {showArchived ? " (archived)" : ""}
             {hasFilters ? " matching filters" : ""}
           </p>
@@ -232,11 +189,10 @@ export default async function ObligationsPage({
               <thead>
                 <tr>
                   <th>Entity</th>
-                  <th>Regime</th>
                   <th style={{ minWidth: 220 }}>Description</th>
                   <th>Responsible owner</th>
                   <th>Accountable owner</th>
-                  <th>Due date</th>
+                  <th>Deadline</th>
                   <th>Risk</th>
                   <th>Data status</th>
                   <th>Tech review</th>
@@ -248,62 +204,58 @@ export default async function ObligationsPage({
                 </tr>
               </thead>
               <tbody>
-                {obligations.map((ob) => (
-                  <tr key={ob.id}>
-                    <td>{ob.entity?.legalName ?? <span className="text-muted">—</span>}</td>
+                {actions.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.entity?.legalName ?? <span className="text-muted">—</span>}</td>
                     <td>
-                      <span className="badge badge-grey" style={{ fontWeight: 500 }}>{ob.regime}</span>
-                      <div className="text-sm text-muted">{ob.obligationType}</div>
-                    </td>
-                    <td>
-                      <Link href={`/obligations/${ob.id}`} title={ob.description}>
-                        {ob.description.length > 80 ? ob.description.slice(0, 80) + "…" : ob.description}
+                      <Link href={`/actions-register/${a.id}`} title={a.description}>
+                        {a.description.length > 80 ? a.description.slice(0, 80) + "…" : a.description}
                       </Link>
                     </td>
-                    <td>{ob.responsibleOwner ?? <span className="text-muted">—</span>}</td>
-                    <td>{ob.accountableOwner ?? <span className="text-muted">—</span>}</td>
-                    <td className={dueDateClass(ob.filingDeadline)}>
-                      {ob.filingDeadline ? fmtDate(ob.filingDeadline) : <span className="text-muted">—</span>}
+                    <td>{a.responsibleParty ?? <span className="text-muted">—</span>}</td>
+                    <td>{a.accountableParty ?? <span className="text-muted">—</span>}</td>
+                    <td className={dueDateClass(a.deadline)}>
+                      {a.deadline ? fmtDate(a.deadline) : <span className="text-muted">—</span>}
                     </td>
                     <td>
-                      {ob.riskLevel
-                        ? <span className={`badge ${riskBadgeClass(ob.riskLevel)}`}>{ob.riskLevel}</span>
+                      {a.riskLevel
+                        ? <span className={`badge ${riskBadgeClass(a.riskLevel)}`}>{a.riskLevel}</span>
                         : <span className="text-muted">—</span>}
                     </td>
                     <td>
-                      <span className={`badge ${statusBadgeClass(ob.dataCompletenessStatus)}`}>
-                        {ob.dataCompletenessStatus}
+                      <span className={`badge ${statusBadgeClass(a.dataCompletenessStatus)}`}>
+                        {a.dataCompletenessStatus}
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${statusBadgeClass(ob.technicalReviewStatus)}`}>
-                        {ob.technicalReviewStatus}
+                      <span className={`badge ${statusBadgeClass(a.technicalReviewStatus)}`}>
+                        {a.technicalReviewStatus}
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${statusBadgeClass(ob.evidenceStatus)}`}>
-                        {ob.evidenceStatus}
+                      <span className={`badge ${statusBadgeClass(a.evidenceStatus)}`}>
+                        {a.evidenceStatus}
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${statusBadgeClass(ob.filingSubmissionStatus)}`}>
-                        {ob.filingSubmissionStatus}
+                      <span className={`badge ${statusBadgeClass(a.filingSubmissionStatus)}`}>
+                        {a.filingSubmissionStatus}
                       </span>
                     </td>
                     <td>
-                      {ob.paymentRequired
-                        ? <span className={`badge ${statusBadgeClass(ob.paymentStatus)}`}>{ob.paymentStatus}</span>
+                      {a.paymentRequired
+                        ? <span className={`badge ${statusBadgeClass(a.paymentStatus)}`}>{a.paymentStatus}</span>
                         : <span className="text-muted">N/A</span>}
                     </td>
                     <td>
-                      <span className={`badge ${statusBadgeClass(ob.overallWorkflowStatus)}`}>
-                        {ob.overallWorkflowStatus}
+                      <span className={`badge ${statusBadgeClass(a.overallStatus)}`}>
+                        {a.overallStatus}
                       </span>
                     </td>
                     <td>
                       <div className="flex gap8">
-                        <Link href={`/obligations/${ob.id}`} className="btn btn-secondary btn-sm">View</Link>
-                        <Link href={`/obligations/${ob.id}/edit`} className="btn btn-secondary btn-sm">Edit</Link>
+                        <Link href={`/actions-register/${a.id}`} className="btn btn-secondary btn-sm">View</Link>
+                        <Link href={`/actions-register/${a.id}/edit`} className="btn btn-secondary btn-sm">Edit</Link>
                       </div>
                     </td>
                   </tr>

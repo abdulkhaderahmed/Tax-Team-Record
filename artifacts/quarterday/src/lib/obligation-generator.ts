@@ -145,8 +145,10 @@ export interface DraftObligationData {
   dataValidationStatus: string;
   technicalReviewStatus: string;
   approvalStatus: string;
+  workflowProgressStatus: string;
   evidenceStatus: string;
-  filingPaymentStatus: string;
+  filingSubmissionStatus: string;
+  paymentStatus: string;
 }
 
 // ── Main generator ────────────────────────────────────────────────────────
@@ -195,7 +197,7 @@ export function generateDraftObligations(
       ruleId: params.ruleId,
       calculationBasis: params.calculationBasis,
       humanExplanation: params.humanExplanation,
-      overallWorkflowStatus: "Draft",
+      overallWorkflowStatus: "Not started",
       draftReviewStatus: "pending",
       responsibleOwner: entity.primaryTaxOwner ?? null,
       accountableOwner: entity.financeOwner ?? null,
@@ -204,8 +206,10 @@ export function generateDraftObligations(
       dataValidationStatus: "Not started",
       technicalReviewStatus: "Not started",
       approvalStatus: "Not started",
+      workflowProgressStatus: "Not started",
       evidenceStatus: "Not started",
-      filingPaymentStatus: "Not started",
+      filingSubmissionStatus: "Not started",
+      paymentStatus: "Not started",
     });
   }
 

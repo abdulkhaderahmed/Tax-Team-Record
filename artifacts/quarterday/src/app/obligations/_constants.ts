@@ -45,15 +45,7 @@ export const OBLIGATION_TYPES = [
   "Other",
 ] as const;
 
-export const STATUS_VALUES = [
-  "Not started",
-  "In progress",
-  "Blocked",
-  "Ready for review",
-  "Approved",
-  "Complete",
-  "Not applicable",
-] as const;
+export { STATUS_VALUES } from "@/lib/raci-constants";
 
 export const RISK_LEVELS = ["Low", "Medium", "High", "Critical"] as const;
 

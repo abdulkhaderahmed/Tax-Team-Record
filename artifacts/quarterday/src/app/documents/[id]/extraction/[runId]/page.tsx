@@ -461,7 +461,7 @@ export default async function ExtractionRunPage({
                               </div>
                               <div className="form-row" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Evidence required</label>
-                                <input name="evidenceRequired" className="form-input" defaultValue={(data.evidenceRequired as string) ?? ""} />
+                                <input name="evidenceDescription" className="form-input" defaultValue={(data.evidenceRequired as string) ?? ""} />
                               </div>
                             </div>
                             <div className="form-row">

@@ -25,6 +25,7 @@ model Organisation {
   actions             Action[]
   assumptions         Assumption[]
   tripwires           Tripwire[]
+  parties             Party[]
 }
 
 model User {
@@ -166,21 +167,34 @@ model ManualObligation {
   periodEnd          DateTime?
   source             String?
 
-  // Ownership
-  responsibleOwner String?
-  accountableOwner String?
-  consultedParty   String?
-  informedParty    String?
-  externalAdviser  String?
+  // Ownership (RACI) — free-text quick fields; richer structured records
+  // for the same roles are optionally tracked via raciAssignments below.
+  responsibleOwner         String?
+  accountableOwner         String?
+  consultedParty           String?
+  informedParty            String?
+  externalAdviser          String?
+  externalOperationalOwner String?
 
-  // Status (7 separate dimensions)
-  dataCompletenessStatus String @default("Not started")
-  dataValidationStatus   String @default("Not started")
-  technicalReviewStatus  String @default("Not started")
-  approvalStatus         String @default("Not started")
-  evidenceStatus         String @default("Not started")
-  filingPaymentStatus    String @default("Not started")
-  overallWorkflowStatus  String @default("Not started")
+  // Requirement flags — not every obligation needs every status dimension
+  dataCollectionRequired      Boolean @default(true)
+  dataValidationRequired      Boolean @default(true)
+  technicalReviewRequired     Boolean @default(true)
+  accountableApprovalRequired Boolean @default(true)
+  filingSubmissionRequired    Boolean @default(true)
+  paymentRequired             Boolean @default(false)
+
+  // Status (9 separate dimensions — see src/lib/ownership-control.ts)
+  dataCompletenessStatus  String  @default("Not started")
+  dataValidationStatus    String  @default("Not started")
+  technicalReviewStatus   String  @default("Not started")
+  approvalStatus          String  @default("Not started")
+  workflowProgressStatus  String  @default("Not started")
+  evidenceStatus          String  @default("Not started")
+  filingSubmissionStatus  String  @default("Not started")
+  paymentStatus           String  @default("Not started")
+  overallWorkflowStatus   String  @default("Not started")
+  overallStatusIsOverride Boolean @default(false)
 
   // Evidence
   evidenceRequired    Boolean @default(false)
@@ -215,7 +229,9 @@ model ManualObligation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sourceRef ObligationSourceRef?
+  sourceRef       ObligationSourceRef?
+  raciAssignments RaciAssignment[]
+  auditEvents     AuditEvent[]
 
   @@index([organisationId])
   @@index([entityId])
@@ -235,15 +251,46 @@ model Action {
   entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
 
   description             String
-  responsibleParty        String?
-  accountableParty        String?
-  externalOwner           String?
   deadline                DateTime?
   relativeDeadlineTrigger String?
   relativeDeadlineOffset  String?
-  evidenceRequired        String?
+  evidenceDescription     String?
   conditionText           String?
-  status                  String    @default("Open") // Open | Done | Archived
+
+  // Ownership (RACI) — free-text quick fields; richer structured records
+  // for the same roles are optionally tracked via raciAssignments below.
+  responsibleParty         String?
+  accountableParty         String?
+  consultedParty           String?
+  informedParty            String?
+  externalAdviser          String?
+  externalOperationalOwner String?
+
+  // Requirement flags — not every action needs every status dimension
+  dataCollectionRequired      Boolean @default(false)
+  dataValidationRequired      Boolean @default(false)
+  technicalReviewRequired     Boolean @default(false)
+  accountableApprovalRequired Boolean @default(true)
+  evidenceRequired            Boolean @default(false)
+  filingSubmissionRequired    Boolean @default(false)
+  paymentRequired             Boolean @default(false)
+
+  // Status (9 separate dimensions — see src/lib/ownership-control.ts)
+  dataCompletenessStatus  String  @default("Not started")
+  dataValidationStatus    String  @default("Not started")
+  technicalReviewStatus   String  @default("Not started")
+  approvalStatus          String  @default("Not started")
+  workflowProgressStatus  String  @default("Not started")
+  evidenceStatus          String  @default("Not started")
+  filingSubmissionStatus  String  @default("Not started")
+  paymentStatus           String  @default("Not started")
+  overallStatus           String  @default("Not started")
+  overallStatusIsOverride Boolean @default(false)
+
+  // Risk & control
+  riskLevel         String?
+  openIssueBlocker  String?
+  exceptionRequired Boolean @default(false)
 
   sourceType              String?
   sourceDocumentReference String?
@@ -255,8 +302,67 @@ model Action {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  raciAssignments RaciAssignment[]
+  auditEvents     AuditEvent[]
+
   @@index([organisationId])
   @@index([entityId])
+}
+
+// ── Ownership, RACI & status controls ───────────────────────────
+
+model Party {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  name               String
+  email              String?
+  organisationOrTeam String?
+  partyType          String // Internal tax | Finance | Payroll | HR | Legal | Treasury | Company secretarial |
+  // Share plan administrator | External tax adviser | External legal adviser | Auditor | Board/CFO | Other
+  isExternal         Boolean @default(false)
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  raciAssignments RaciAssignment[]
+
+  @@index([organisationId])
+}
+
+model RaciAssignment {
+  id      String @id @default(cuid())
+  role    String // Responsible | Accountable | Consulted | Informed | External adviser | External operational owner
+  partyId String
+  party   Party  @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  manualObligationId String?
+  manualObligation   ManualObligation? @relation(fields: [manualObligationId], references: [id], onDelete: Cascade)
+  actionId           String?
+  action             Action?           @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([manualObligationId])
+  @@index([actionId])
+  @@index([partyId])
+}
+
+model StatusHistory {
+  id          String   @id @default(cuid())
+  objectType  String // ManualObligation | Action
+  objectId    String
+  statusField String // e.g. dataCompletenessStatus, overallWorkflowStatus, responsibleOwner, evidenceRequired...
+  oldValue    String?
+  newValue    String?
+  changedBy   String?
+  changedAt   DateTime @default(now())
+  reason      String?
+
+  @@index([objectType, objectId])
+  @@index([changedAt])
 }
 
 model Assumption {
@@ -629,21 +735,27 @@ model ObligationSourceRef {
 }
 
 model AuditEvent {
-  id             String       @id @default(cuid())
-  organisationId String
-  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  userId         String?
-  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  entityId       String?
-  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
-  obligationId   String?
-  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
-  action         String
-  detail         String?
-  createdAt      DateTime     @default(now())
+  id                 String            @id @default(cuid())
+  organisationId     String
+  organisation       Organisation      @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  userId             String?
+  user               User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  entityId           String?
+  entity             Entity?           @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId       String?
+  obligation         Obligation?       @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  manualObligationId String?
+  manualObligation   ManualObligation? @relation(fields: [manualObligationId], references: [id], onDelete: SetNull)
+  actionId           String?
+  actionRecord       Action?           @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  action             String
+  detail             String?
+  createdAt          DateTime          @default(now())
 
   @@index([organisationId])
   @@index([entityId])
   @@index([userId])
   @@index([createdAt])
+  @@index([manualObligationId])
+  @@index([actionId])
 }

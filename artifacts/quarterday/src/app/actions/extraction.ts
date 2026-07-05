@@ -460,7 +460,7 @@ export async function confirmItemAsAction(itemId: string, formData: FormData) {
   const description = formData.get("description") as string;
   const responsibleParty = (formData.get("responsibleParty") as string) || null;
   const deadlineRaw = formData.get("deadline") as string;
-  const evidenceRequired = (formData.get("evidenceRequired") as string) || item.suggestedEvidenceRequired || null;
+  const evidenceDescription = (formData.get("evidenceDescription") as string) || item.suggestedEvidenceRequired || null;
 
   const wasEdited = description !== item.plainSummary;
 
@@ -471,7 +471,8 @@ export async function confirmItemAsAction(itemId: string, formData: FormData) {
       description,
       responsibleParty: responsibleParty || item.suggestedOwner,
       deadline: deadlineRaw ? new Date(deadlineRaw) : null,
-      evidenceRequired,
+      evidenceDescription,
+      evidenceRequired: !!evidenceDescription,
       conditionText: conditionResolutionNote ? null : item.conditionText,
       sourceType: "AI extraction",
       sourceDocumentReference: item.document.filename,

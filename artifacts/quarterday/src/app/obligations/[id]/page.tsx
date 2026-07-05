@@ -7,26 +7,7 @@ import {
   unarchiveManualObligation,
   deleteManualObligation,
 } from "@/app/actions/manualObligations";
-
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "Complete" || status === "Approved" ? "badge-green" :
-    status === "In progress" ? "badge-blue" :
-    status === "Blocked" ? "badge-red" :
-    status === "Ready for review" ? "badge-yellow" :
-    "badge-grey";
-  return <span className={`badge ${cls}`}>{status}</span>;
-}
-
-function RiskBadge({ risk }: { risk: string | null }) {
-  if (!risk) return <span className="text-muted">—</span>;
-  const cls =
-    risk === "Critical" ? "badge-red" :
-    risk === "High" ? "badge-orange" :
-    risk === "Medium" ? "badge-yellow" :
-    "badge-green";
-  return <span className={`badge ${cls}`}>{risk}</span>;
-}
+import { OwnershipAndControls } from "@/components/ownership-controls";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -44,10 +25,14 @@ export default async function ObligationDetailPage({
 }) {
   const { id } = await params;
 
-  const ob = await prisma.manualObligation.findUnique({
-    where: { id },
-    include: { entity: { select: { id: true, legalName: true } } },
-  });
+  const [ob, raciAssignments, statusHistory] = await Promise.all([
+    prisma.manualObligation.findUnique({
+      where: { id },
+      include: { entity: { select: { id: true, legalName: true } } },
+    }),
+    prisma.raciAssignment.findMany({ where: { manualObligationId: id }, include: { party: true } }),
+    prisma.statusHistory.findMany({ where: { objectType: "ManualObligation", objectId: id }, orderBy: { changedAt: "desc" }, take: 50 }),
+  ]);
 
   if (!ob) notFound();
 
@@ -91,21 +76,40 @@ export default async function ObligationDetailPage({
         </div>
       )}
 
-      {/* Status overview */}
-      <div className="panel">
-        <h2>Status</h2>
-        <div className="detail-grid cols3">
-          <Row label="Overall workflow" value={<StatusBadge status={ob.overallWorkflowStatus} />} />
-          <Row label="Data completeness" value={<StatusBadge status={ob.dataCompletenessStatus} />} />
-          <Row label="Data validation" value={<StatusBadge status={ob.dataValidationStatus} />} />
-          <Row label="Technical review" value={<StatusBadge status={ob.technicalReviewStatus} />} />
-          <Row label="Approval" value={<StatusBadge status={ob.approvalStatus} />} />
-          <Row label="Evidence" value={<StatusBadge status={ob.evidenceStatus} />} />
-          <Row label="Filing / payment" value={<StatusBadge status={ob.filingPaymentStatus} />} />
-          <Row label="Risk level" value={<RiskBadge risk={ob.riskLevel} />} />
-          <Row label="Exception required" value={ob.exceptionRequired ? "Yes" : "No"} />
-        </div>
-      </div>
+      <OwnershipAndControls
+        objectType="ManualObligation"
+        objectId={ob.id}
+        returnPath={`/obligations/${ob.id}`}
+        responsibleOwner={ob.responsibleOwner}
+        accountableOwner={ob.accountableOwner}
+        consultedParty={ob.consultedParty}
+        informedParty={ob.informedParty}
+        externalAdviser={ob.externalAdviser}
+        externalOperationalOwner={ob.externalOperationalOwner}
+        dataCollectionRequired={ob.dataCollectionRequired}
+        dataValidationRequired={ob.dataValidationRequired}
+        technicalReviewRequired={ob.technicalReviewRequired}
+        accountableApprovalRequired={ob.accountableApprovalRequired}
+        evidenceRequired={ob.evidenceRequired}
+        filingSubmissionRequired={ob.filingSubmissionRequired}
+        paymentRequired={ob.paymentRequired}
+        dataCompletenessStatus={ob.dataCompletenessStatus}
+        dataValidationStatus={ob.dataValidationStatus}
+        technicalReviewStatus={ob.technicalReviewStatus}
+        approvalStatus={ob.approvalStatus}
+        workflowProgressStatus={ob.workflowProgressStatus}
+        evidenceStatus={ob.evidenceStatus}
+        filingSubmissionStatus={ob.filingSubmissionStatus}
+        paymentStatus={ob.paymentStatus}
+        overallStatus={ob.overallWorkflowStatus}
+        overallStatusIsOverride={ob.overallStatusIsOverride}
+        riskLevel={ob.riskLevel}
+        exceptionRequired={ob.exceptionRequired}
+        openIssueBlocker={ob.openIssueBlocker}
+        notes={ob.notes}
+        raciAssignments={raciAssignments}
+        statusHistory={statusHistory}
+      />
 
       {/* Core details */}
       <div className="panel">
@@ -135,18 +139,6 @@ export default async function ObligationDetailPage({
           <Row label="Internal target date" value={ob.internalTargetDate ? fmtDate(ob.internalTargetDate) : null} />
           <Row label="Period start" value={ob.periodStart ? fmtDate(ob.periodStart) : null} />
           <Row label="Period end" value={ob.periodEnd ? fmtDate(ob.periodEnd) : null} />
-        </div>
-      </div>
-
-      {/* Ownership */}
-      <div className="panel">
-        <h2>Ownership</h2>
-        <div className="detail-grid">
-          <Row label="Responsible owner" value={ob.responsibleOwner} />
-          <Row label="Accountable owner" value={ob.accountableOwner} />
-          <Row label="Consulted party" value={ob.consultedParty} />
-          <Row label="Informed party" value={ob.informedParty} />
-          <Row label="External adviser" value={ob.externalAdviser} />
         </div>
       </div>
 

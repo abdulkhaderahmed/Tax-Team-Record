@@ -3,6 +3,16 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { computeOverallStatus } from "@/lib/ownership-control";
+import { recordFieldChanges, recordOverallStatusRecalculated } from "@/lib/status-history";
+
+const TRACKED_FIELDS = [
+  "responsibleOwner", "accountableOwner", "consultedParty", "informedParty", "externalAdviser", "externalOperationalOwner",
+  "dataCompletenessStatus", "dataValidationStatus", "technicalReviewStatus", "approvalStatus",
+  "workflowProgressStatus", "evidenceStatus", "filingSubmissionStatus", "paymentStatus", "overallWorkflowStatus",
+  "dataCollectionRequired", "dataValidationRequired", "technicalReviewRequired", "accountableApprovalRequired",
+  "evidenceRequired", "filingSubmissionRequired", "paymentRequired",
+];
 
 function parseDate(raw: string | null | undefined): Date | null {
   if (!raw || raw.trim() === "") return null;
@@ -43,19 +53,28 @@ function parseManualObligationForm(formData: FormData) {
     periodEnd:         parseDate(formData.get("periodEnd") as string),
     source:            str(formData, "source"),
 
-    responsibleOwner:  str(formData, "responsibleOwner"),
-    accountableOwner:  str(formData, "accountableOwner"),
-    consultedParty:    str(formData, "consultedParty"),
-    informedParty:     str(formData, "informedParty"),
-    externalAdviser:   str(formData, "externalAdviser"),
+    responsibleOwner:         str(formData, "responsibleOwner"),
+    accountableOwner:         str(formData, "accountableOwner"),
+    consultedParty:           str(formData, "consultedParty"),
+    informedParty:            str(formData, "informedParty"),
+    externalAdviser:          str(formData, "externalAdviser"),
+    externalOperationalOwner: str(formData, "externalOperationalOwner"),
+
+    dataCollectionRequired:      bool(formData, "dataCollectionRequired"),
+    dataValidationRequired:      bool(formData, "dataValidationRequired"),
+    technicalReviewRequired:     bool(formData, "technicalReviewRequired"),
+    accountableApprovalRequired: bool(formData, "accountableApprovalRequired"),
+    filingSubmissionRequired:    bool(formData, "filingSubmissionRequired"),
+    paymentRequired:             bool(formData, "paymentRequired"),
 
     dataCompletenessStatus: statusField(formData, "dataCompletenessStatus"),
     dataValidationStatus:   statusField(formData, "dataValidationStatus"),
     technicalReviewStatus:  statusField(formData, "technicalReviewStatus"),
     approvalStatus:         statusField(formData, "approvalStatus"),
+    workflowProgressStatus: statusField(formData, "workflowProgressStatus"),
     evidenceStatus:         statusField(formData, "evidenceStatus"),
-    filingPaymentStatus:    statusField(formData, "filingPaymentStatus"),
-    overallWorkflowStatus:  statusField(formData, "overallWorkflowStatus"),
+    filingSubmissionStatus: statusField(formData, "filingSubmissionStatus"),
+    paymentStatus:          statusField(formData, "paymentStatus"),
 
     evidenceRequired:    bool(formData, "evidenceRequired"),
     evidenceDescription: str(formData, "evidenceDescription"),
@@ -76,23 +95,42 @@ function parseManualObligationForm(formData: FormData) {
   };
 }
 
+function resolveOverallStatus(
+  data: ReturnType<typeof parseManualObligationForm>,
+  formData: FormData
+): { overallWorkflowStatus: string; overallStatusIsOverride: boolean; computed: string } {
+  const computed = computeOverallStatus(data).status;
+  const overrideValue = (formData.get("overallStatusOverride") as string || "").trim();
+  if (overrideValue && overrideValue !== computed) {
+    return { overallWorkflowStatus: overrideValue, overallStatusIsOverride: true, computed };
+  }
+  return { overallWorkflowStatus: computed, overallStatusIsOverride: false, computed };
+}
+
 export async function createManualObligation(formData: FormData) {
   const org = await prisma.organisation.findFirst();
   if (!org) throw new Error("No organisation found. Please run the seed script.");
 
   const data = parseManualObligationForm(formData);
+  const { overallWorkflowStatus, overallStatusIsOverride, computed } = resolveOverallStatus(data, formData);
 
   const mo = await prisma.manualObligation.create({
-    data: { organisationId: org.id, ...data },
+    data: { organisationId: org.id, ...data, overallWorkflowStatus, overallStatusIsOverride },
   });
 
   await prisma.auditEvent.create({
     data: {
       organisationId: org.id,
       entityId: data.entityId,
+      manualObligationId: mo.id,
       action: "MANUAL_OBLIGATION_CREATED",
       detail: JSON.stringify({ id: mo.id, description: mo.description, regime: mo.regime }),
     },
+  });
+
+  await recordOverallStatusRecalculated({
+    objectType: "ManualObligation", objectId: mo.id, organisationId: org.id, entityId: data.entityId,
+    computedStatus: computed, storedStatus: overallWorkflowStatus, wasOverridden: overallStatusIsOverride,
   });
 
   revalidatePath("/obligations");
@@ -104,17 +142,36 @@ export async function updateManualObligation(id: string, formData: FormData) {
   const org = await prisma.organisation.findFirst();
   if (!org) throw new Error("No organisation found.");
 
+  const before = await prisma.manualObligation.findUnique({ where: { id } });
+  if (!before) throw new Error("Obligation not found.");
+
   const data = parseManualObligationForm(formData);
+  const statusChangeReason = str(formData, "statusChangeReason");
+  const { overallWorkflowStatus, overallStatusIsOverride, computed } = resolveOverallStatus(data, formData);
 
   const mo = await prisma.manualObligation.update({
     where: { id },
-    data,
+    data: { ...data, overallWorkflowStatus, overallStatusIsOverride },
   });
+
+  await recordFieldChanges({
+    objectType: "ManualObligation", objectId: id, organisationId: org.id, entityId: data.entityId,
+    before: before as unknown as Record<string, unknown>, after: mo as unknown as Record<string, unknown>,
+    fields: TRACKED_FIELDS, changedBy: data.lastUpdatedBy, reason: statusChangeReason,
+  });
+
+  if (before.overallWorkflowStatus !== overallWorkflowStatus) {
+    await recordOverallStatusRecalculated({
+      objectType: "ManualObligation", objectId: id, organisationId: org.id, entityId: data.entityId,
+      computedStatus: computed, storedStatus: overallWorkflowStatus, wasOverridden: overallStatusIsOverride,
+    });
+  }
 
   await prisma.auditEvent.create({
     data: {
       organisationId: org.id,
       entityId: data.entityId,
+      manualObligationId: mo.id,
       action: "MANUAL_OBLIGATION_UPDATED",
       detail: JSON.stringify({ id: mo.id, description: mo.description, updatedBy: data.lastUpdatedBy }),
     },
