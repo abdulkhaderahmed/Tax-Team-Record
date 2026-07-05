@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "quarterday",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm@latest", "--filter", "@workspace/quarterday", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}
