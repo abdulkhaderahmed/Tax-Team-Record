@@ -347,3 +347,15 @@ textarea:focus {
 /* ── Form page max-width ─────────────────────────────────── */
 .form-page { max-width: 860px; }
 
+/* ── Textarea ─────────────────────────────────────────────── */
+textarea { min-height: 72px; resize: vertical; }
+
+/* ── Horizontal-scroll table wrapper ─────────────────────── */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── Extra badge colours ─────────────────────────────────── */
+.badge-orange { background: #fff7ed; color: #c2410c; }
+
+/* ── Small button ────────────────────────────────────────── */
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+

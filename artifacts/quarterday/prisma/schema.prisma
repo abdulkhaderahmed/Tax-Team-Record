@@ -13,9 +13,10 @@ model Organisation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users       User[]
-  entities    Entity[]
-  auditEvents AuditEvent[]
+  users              User[]
+  entities           Entity[]
+  auditEvents        AuditEvent[]
+  manualObligations  ManualObligation[]
 }
 
 model User {
@@ -97,8 +98,9 @@ model Entity {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  obligations Obligation[]
-  auditEvents AuditEvent[]
+  obligations       Obligation[]
+  auditEvents       AuditEvent[]
+  manualObligations ManualObligation[]
 }
 
 model ObligationRule {
@@ -128,6 +130,73 @@ model Obligation {
   updatedAt DateTime       @updatedAt
 
   auditEvents AuditEvent[]
+}
+
+model ManualObligation {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  // Core
+  regime             String
+  obligationType     String
+  description        String
+  statutoryBasis     String?
+  filingDeadline     DateTime?
+  paymentDeadline    DateTime?
+  internalTargetDate DateTime?
+  recurrence         String?
+  periodStart        DateTime?
+  periodEnd          DateTime?
+  source             String?
+
+  // Ownership
+  responsibleOwner String?
+  accountableOwner String?
+  consultedParty   String?
+  informedParty    String?
+  externalAdviser  String?
+
+  // Status (7 separate dimensions)
+  dataCompletenessStatus String @default("Not started")
+  dataValidationStatus   String @default("Not started")
+  technicalReviewStatus  String @default("Not started")
+  approvalStatus         String @default("Not started")
+  evidenceStatus         String @default("Not started")
+  filingPaymentStatus    String @default("Not started")
+  overallWorkflowStatus  String @default("Not started")
+
+  // Evidence
+  evidenceRequired    Boolean @default(false)
+  evidenceDescription String?
+  evidenceFileLink    String?
+  evidenceOwner       String?
+
+  // Risk & control
+  riskLevel                    String?
+  consequenceOfMissingDeadline String?
+  openIssueBlocker             String?
+  notes                        String?
+  exceptionRequired            Boolean @default(false)
+
+  // Source & audit
+  sourceType              String?
+  sourceDocumentReference String?
+  sourcePageParagraph     String?
+  createdBy               String?
+  lastUpdatedBy           String?
+
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organisationId])
+  @@index([entityId])
+  @@index([filingDeadline])
+  @@index([overallWorkflowStatus])
 }
 
 model AuditEvent {

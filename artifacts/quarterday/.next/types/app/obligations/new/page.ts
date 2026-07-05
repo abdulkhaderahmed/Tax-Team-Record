@@ -1,8 +1,8 @@
-// File: /home/runner/workspace/artifacts/quarterday/src/app/entities/new/page.tsx
-import * as entry from '../../../../../src/app/entities/new/page.js'
+// File: /home/runner/workspace/artifacts/quarterday/src/app/obligations/new/page.tsx
+import * as entry from '../../../../../src/app/obligations/new/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../src/app/entities/new/page.js')
+type TEntry = typeof import('../../../../../src/app/obligations/new/page.js')
 
 type SegmentParams<T extends Object = any> = T extends Record<string, any>
   ? { [K in keyof T]: T[K] extends string ? string | string[] | undefined : never }

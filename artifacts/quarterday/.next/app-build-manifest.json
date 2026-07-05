@@ -11,15 +11,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/entities/new/page": [
+    "/obligations/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/entities/new/page.js"
+      "static/chunks/app/obligations/page.js"
     ],
-    "/entities/page": [
+    "/obligations/new/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/entities/page.js"
+      "static/chunks/app/obligations/new/page.js"
     ]
   }
 }

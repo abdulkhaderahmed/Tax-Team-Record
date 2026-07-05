@@ -1,0 +1,149 @@
+Build the manual obligation register for Quarterday.
+
+This register is for an in-house tax team. It should track tax reporting obligations, compliance tasks, claim workflows, review points and evidence requirements. It should not calculate tax.
+
+Users should be able to:
+1. View all obligations.
+2. Create an obligation for an entity.
+3. Edit an obligation.
+4. Delete or archive an obligation.
+5. Filter obligations by entity, regime, due date, owner, status and risk level.
+6. Search obligations by description or statutory basis.
+
+Each obligation should have these fields:
+
+Core fields:
+1. Entity.
+2. Regime.
+3. Obligation type.
+4. Description.
+5. Statutory basis.
+6. Filing deadline.
+7. Payment deadline.
+8. Internal target date.
+9. Recurrence.
+10. Period start date.
+11. Period end date.
+12. Source.
+
+Regime should be a dropdown with at least:
+1. Corporation Tax.
+2. Corporation Tax Payment.
+3. Quarterly Instalment Payments.
+4. VAT.
+5. PAYE/NIC.
+6. P11D/P11D(b).
+7. PSA.
+8. ERS.
+9. EMI.
+10. R&D.
+11. Capital Allowances.
+12. Transfer Pricing.
+13. SAO.
+14. CCO.
+15. Published Tax Strategy.
+16. Pillar 2.
+17. FATCA/CRS.
+18. BBSI.
+19. Other.
+
+Obligation type should be a dropdown with at least:
+1. Filing.
+2. Payment.
+3. Claim.
+4. Notification.
+5. Additional information form.
+6. Evidence preparation.
+7. Review.
+8. Approval.
+9. Registration.
+10. Re-attestation.
+11. Monitoring.
+12. Other.
+
+R&D-specific examples should be supported:
+1. R&D claim notification.
+2. R&D additional information form.
+3. R&D technical evidence pack.
+4. R&D claim review before CT600 submission.
+
+Capital allowances-specific examples should be supported:
+1. Fixed asset register review.
+2. Capital expenditure evidence collection.
+3. AIA review.
+4. Full expensing review.
+5. Special rate pool review.
+6. Capital allowances position included in CT computation.
+
+Ownership fields:
+1. Responsible owner.
+2. Accountable owner.
+3. Consulted party.
+4. Informed party.
+5. External adviser.
+
+Status fields must be separate. Do not use only one generic status.
+
+Add these statuses:
+1. Data completeness status.
+2. Data validation status.
+3. Technical review status.
+4. Approval status.
+5. Evidence status.
+6. Filing/payment status.
+7. Overall workflow status.
+
+Each status should use simple dropdown values such as:
+1. Not started.
+2. In progress.
+3. Blocked.
+4. Ready for review.
+5. Approved.
+6. Complete.
+7. Not applicable.
+
+Evidence fields:
+1. Evidence required?
+2. Evidence description.
+3. Evidence status.
+4. Evidence file link placeholder.
+5. Evidence owner.
+
+Risk and control fields:
+1. Risk level: Low, Medium, High, Critical.
+2. Consequence of missing deadline.
+3. Open issue / blocker.
+4. Notes.
+5. Exception required? yes/no.
+
+Source and audit fields:
+1. Source type: Manual, Rules pack, Adviser document, HMRC guidance, Imported file, Other.
+2. Source document reference.
+3. Source page or paragraph.
+4. Created date.
+5. Created by.
+6. Last updated date.
+7. Last updated by.
+
+Build the UI as a clear table with:
+1. Entity.
+2. Regime.
+3. Obligation type.
+4. Description.
+5. Filing deadline.
+6. Payment deadline.
+7. Responsible owner.
+8. Risk level.
+9. Overall workflow status.
+10. Evidence status.
+11. Technical review status.
+
+Add a detail view for each obligation so the extra fields do not make the table too crowded.
+
+When an obligation is created or edited, create an audit event.
+
+Do not build AI extraction yet.
+Do not build automatic obligation generation yet.
+Do not build HMRC filing.
+Do not build tax calculations.
+This is a manual system-of-record register only.

@@ -6,7 +6,7 @@
  * or disable the default devtool with "devtool: false".
  * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
  */
-(self["webpackChunk_N_E"] = self["webpackChunk_N_E"] || []).push([["app/entities/page"],{
+(self["webpackChunk_N_E"] = self["webpackChunk_N_E"] || []).push([["app/obligations/page"],{
 
 /***/ "(app-pages-browser)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22%2Fhome%2Frunner%2Fworkspace%2Fnode_modules%2F.pnpm%2Fnext%4015.5.20_react-dom%4019.1.0_react%4019.1.0__react%4019.1.0%2Fnode_modules%2Fnext%2Fdist%2Fclient%2Fapp-dir%2Flink.js%22%2C%22ids%22%3A%5B%22__esModule%22%2C%22default%22%5D%7D&server=false!":
 /*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\

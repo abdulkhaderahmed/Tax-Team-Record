@@ -1,56 +1,69 @@
 {
   "node": {
-    "40bbb4942cfa37ff899809924896f44bd6e396fe04": {
+    "40a871d91faa9cc6df05100cad222dab95e1c99284": {
       "workers": {
-        "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+        "app/obligations/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2FmanualObligations.ts%22%2C%5B%7B%22id%22%3A%2240a871d91faa9cc6df05100cad222dab95e1c99284%22%2C%22exportedName%22%3A%22archiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240a8dea7de55c392d34293b6ed33ba8f407c0def19%22%2C%22exportedName%22%3A%22createManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240b75002e33952117b471aeed0d5540b7e11587eac%22%2C%22exportedName%22%3A%22unarchiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240bc9d07692654ec95ac0c34218ea5fceaa96d089a%22%2C%22exportedName%22%3A%22deleteManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2260092d1ababae00b7726ed8feadee2308c6e3c8625%22%2C%22exportedName%22%3A%22updateManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc"
+        "app/obligations/new/page": "rsc"
       },
-      "filename": "app/actions/entities.ts",
-      "exportedName": "deleteEntity"
+      "filename": "app/actions/manualObligations.ts",
+      "exportedName": "archiveManualObligation"
     },
-    "40d77e1fadd2c6cf19900e9f70ce4022381f350f7c": {
+    "40a8dea7de55c392d34293b6ed33ba8f407c0def19": {
       "workers": {
-        "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+        "app/obligations/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2FmanualObligations.ts%22%2C%5B%7B%22id%22%3A%2240a871d91faa9cc6df05100cad222dab95e1c99284%22%2C%22exportedName%22%3A%22archiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240a8dea7de55c392d34293b6ed33ba8f407c0def19%22%2C%22exportedName%22%3A%22createManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240b75002e33952117b471aeed0d5540b7e11587eac%22%2C%22exportedName%22%3A%22unarchiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240bc9d07692654ec95ac0c34218ea5fceaa96d089a%22%2C%22exportedName%22%3A%22deleteManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2260092d1ababae00b7726ed8feadee2308c6e3c8625%22%2C%22exportedName%22%3A%22updateManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc"
+        "app/obligations/new/page": "rsc"
       },
-      "filename": "app/actions/entities.ts",
-      "exportedName": "saveObligations"
+      "filename": "app/actions/manualObligations.ts",
+      "exportedName": "createManualObligation"
     },
-    "40e282851171dbdc4a269a192d3a467960faf5fecf": {
+    "40b75002e33952117b471aeed0d5540b7e11587eac": {
       "workers": {
-        "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+        "app/obligations/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2FmanualObligations.ts%22%2C%5B%7B%22id%22%3A%2240a871d91faa9cc6df05100cad222dab95e1c99284%22%2C%22exportedName%22%3A%22archiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240a8dea7de55c392d34293b6ed33ba8f407c0def19%22%2C%22exportedName%22%3A%22createManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240b75002e33952117b471aeed0d5540b7e11587eac%22%2C%22exportedName%22%3A%22unarchiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240bc9d07692654ec95ac0c34218ea5fceaa96d089a%22%2C%22exportedName%22%3A%22deleteManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2260092d1ababae00b7726ed8feadee2308c6e3c8625%22%2C%22exportedName%22%3A%22updateManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc"
+        "app/obligations/new/page": "rsc"
       },
-      "filename": "app/actions/entities.ts",
-      "exportedName": "createEntity"
+      "filename": "app/actions/manualObligations.ts",
+      "exportedName": "unarchiveManualObligation"
     },
-    "60b57f931de975d4f730fd4d5bae78f4c5d9825c6b": {
+    "40bc9d07692654ec95ac0c34218ea5fceaa96d089a": {
       "workers": {
-        "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+        "app/obligations/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2FmanualObligations.ts%22%2C%5B%7B%22id%22%3A%2240a871d91faa9cc6df05100cad222dab95e1c99284%22%2C%22exportedName%22%3A%22archiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240a8dea7de55c392d34293b6ed33ba8f407c0def19%22%2C%22exportedName%22%3A%22createManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240b75002e33952117b471aeed0d5540b7e11587eac%22%2C%22exportedName%22%3A%22unarchiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240bc9d07692654ec95ac0c34218ea5fceaa96d089a%22%2C%22exportedName%22%3A%22deleteManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2260092d1ababae00b7726ed8feadee2308c6e3c8625%22%2C%22exportedName%22%3A%22updateManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc"
+        "app/obligations/new/page": "rsc"
       },
-      "filename": "app/actions/entities.ts",
-      "exportedName": "updateEntity"
+      "filename": "app/actions/manualObligations.ts",
+      "exportedName": "deleteManualObligation"
+    },
+    "60092d1ababae00b7726ed8feadee2308c6e3c8625": {
+      "workers": {
+        "app/obligations/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2FmanualObligations.ts%22%2C%5B%7B%22id%22%3A%2240a871d91faa9cc6df05100cad222dab95e1c99284%22%2C%22exportedName%22%3A%22archiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240a8dea7de55c392d34293b6ed33ba8f407c0def19%22%2C%22exportedName%22%3A%22createManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240b75002e33952117b471aeed0d5540b7e11587eac%22%2C%22exportedName%22%3A%22unarchiveManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2240bc9d07692654ec95ac0c34218ea5fceaa96d089a%22%2C%22exportedName%22%3A%22deleteManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%2C%7B%22id%22%3A%2260092d1ababae00b7726ed8feadee2308c6e3c8625%22%2C%22exportedName%22%3A%22updateManualObligation%22%2C%22filename%22%3A%22app%2Factions%2FmanualObligations.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/obligations/new/page": "rsc"
+      },
+      "filename": "app/actions/manualObligations.ts",
+      "exportedName": "updateManualObligation"
     }
   },
   "edge": {},
