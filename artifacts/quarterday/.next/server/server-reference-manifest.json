@@ -3,22 +3,12 @@
     "40bbb4942cfa37ff899809924896f44bd6e396fe04": {
       "workers": {
         "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        },
-        "app/entities/[id]/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        },
-        "app/entities/[id]/obligations/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc",
-        "app/entities/[id]/page": "rsc",
-        "app/entities/[id]/obligations/page": "rsc"
+        "app/entities/new/page": "rsc"
       },
       "filename": "app/actions/entities.ts",
       "exportedName": "deleteEntity"
@@ -26,22 +16,12 @@
     "40d77e1fadd2c6cf19900e9f70ce4022381f350f7c": {
       "workers": {
         "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        },
-        "app/entities/[id]/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        },
-        "app/entities/[id]/obligations/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc",
-        "app/entities/[id]/page": "rsc",
-        "app/entities/[id]/obligations/page": "rsc"
+        "app/entities/new/page": "rsc"
       },
       "filename": "app/actions/entities.ts",
       "exportedName": "saveObligations"
@@ -49,25 +29,28 @@
     "40e282851171dbdc4a269a192d3a467960faf5fecf": {
       "workers": {
         "app/entities/new/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        },
-        "app/entities/[id]/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        },
-        "app/entities/[id]/obligations/page": {
-          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
           "async": false
         }
       },
       "layer": {
-        "app/entities/new/page": "rsc",
-        "app/entities/[id]/page": "rsc",
-        "app/entities/[id]/obligations/page": "rsc"
+        "app/entities/new/page": "rsc"
       },
       "filename": "app/actions/entities.ts",
       "exportedName": "createEntity"
+    },
+    "60b57f931de975d4f730fd4d5bae78f4c5d9825c6b": {
+      "workers": {
+        "app/entities/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fentities.ts%22%2C%5B%7B%22id%22%3A%2240bbb4942cfa37ff899809924896f44bd6e396fe04%22%2C%22exportedName%22%3A%22deleteEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240d77e1fadd2c6cf19900e9f70ce4022381f350f7c%22%2C%22exportedName%22%3A%22saveObligations%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2240e282851171dbdc4a269a192d3a467960faf5fecf%22%2C%22exportedName%22%3A%22createEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%2C%7B%22id%22%3A%2260b57f931de975d4f730fd4d5bae78f4c5d9825c6b%22%2C%22exportedName%22%3A%22updateEntity%22%2C%22filename%22%3A%22app%2Factions%2Fentities.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/entities/new/page": "rsc"
+      },
+      "filename": "app/actions/entities.ts",
+      "exportedName": "updateEntity"
     }
   },
   "edge": {},

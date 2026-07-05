@@ -170,6 +170,7 @@ p  { margin: 0 0 12px; }
 .form-grid.full { grid-template-columns: 1fr; }
 .form-group { margin-bottom: 18px; }
 .form-group.span2 { grid-column: span 2; }
+.form-group.span3 { grid-column: span 3; }
 
 label {
   display: block;
@@ -186,7 +187,10 @@ label {
 
 input[type="text"],
 input[type="number"],
-select {
+input[type="date"],
+input[type="email"],
+select,
+textarea {
   width: 100%;
   padding: 7px 10px;
   border: 1px solid #d1d5db;
@@ -195,10 +199,14 @@ select {
   color: #111827;
   background: #fff;
   appearance: auto;
+  font-family: inherit;
 }
 input[type="text"]:focus,
 input[type="number"]:focus,
-select:focus {
+input[type="date"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -215,6 +223,7 @@ select:focus {
   height: 14px;
   margin: 0;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .checkbox-row label {
   margin: 0;
@@ -227,6 +236,16 @@ select:focus {
   font-size: 11px;
   color: #9ca3af;
   margin-left: 4px;
+}
+
+/* Compact boolean grid for groups of checkboxes */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 24px;
+}
+.checkbox-grid .checkbox-row {
+  margin-bottom: 6px;
 }
 
 .section-divider {
@@ -295,20 +314,27 @@ select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.detail-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
 .detail-item { display: flex; flex-direction: column; gap: 2px; }
 .detail-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
 .detail-value { font-size: 14px; color: #111827; }
 
-.flag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.flag-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ── Utilities ───────────────────────────────────────────── */
 .mt8  { margin-top: 8px; }
 .mt16 { margin-top: 16px; }
 .mt24 { margin-top: 24px; }
+.mb0  { margin-bottom: 0; }
 .flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
 .gap8  { gap: 8px; }
 .gap12 { gap: 12px; }
 .text-muted { color: #9ca3af; }
 .text-sm { font-size: 12px; }
 .due-overdue { color: #b91c1c; font-weight: 600; }
 .due-soon    { color: #b45309; }
+
+/* ── Form page max-width ─────────────────────────────────── */
+.form-page { max-width: 860px; }

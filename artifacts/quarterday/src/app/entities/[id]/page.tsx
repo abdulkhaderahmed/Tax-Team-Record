@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { fmtDate } from "@/lib/obligations";
+import { fmtDate, MONTH_NAMES } from "@/lib/obligations";
 import { deleteEntity } from "@/app/actions/entities";
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+function YesNo({ value }: { value: boolean }) {
+  return (
+    <span className={`badge ${value ? "badge-green" : "badge-grey"}`}>
+      {value ? "Yes" : "No"}
+    </span>
+  );
+}
 
 export default async function EntityDetailPage({
   params,
@@ -22,10 +25,7 @@ export default async function EntityDetailPage({
       _count: { select: { obligations: true } },
       obligations: {
         where: {
-          dueDate: {
-            gte: new Date(),
-            lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-          },
+          dueDate: { gte: new Date(), lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) },
         },
         orderBy: { dueDate: "asc" },
         take: 5,
@@ -36,22 +36,11 @@ export default async function EntityDetailPage({
 
   if (!entity) notFound();
 
-  const flags = [
-    { key: "isLargeCompany", label: "Large company", active: entity.isLargeCompany },
-    { key: "isVeryLargeCompany", label: "Very large company", active: entity.isVeryLargeCompany },
-    { key: "hasErs", label: "ERS", active: entity.hasErs },
-    { key: "hasPillar2", label: "Pillar 2", active: entity.hasPillar2 },
-  ];
-
-  const vatLabel = entity.vatQuarterEndMonth
-    ? `${MONTHS[entity.vatQuarterEndMonth - 1]} stagger`
-    : "Not registered";
-
-  const yearEndLabel = `${entity.accountingYearEndDay} ${
-    MONTHS[entity.accountingYearEndMonth - 1]
-  }`;
-
   const deleteAction = deleteEntity.bind(null, entity.id);
+
+  const vatStagger = entity.vatQuarterEndMonth
+    ? `${MONTH_NAMES[entity.vatQuarterEndMonth - 1]} stagger`
+    : "—";
 
   return (
     <>
@@ -64,18 +53,18 @@ export default async function EntityDetailPage({
           <h1>{entity.legalName}</h1>
         </div>
         <div className="flex gap8">
-          <Link
-            href={`/entities/${entity.id}/obligations`}
-            className="btn btn-primary"
-          >
-            View Obligations Calendar
+          <Link href={`/entities/${entity.id}/edit`} className="btn btn-secondary">
+            Edit
+          </Link>
+          <Link href={`/entities/${entity.id}/obligations`} className="btn btn-primary">
+            Obligations Calendar
           </Link>
         </div>
       </div>
 
-      {/* Core details */}
+      {/* ── Identification ─────────────────────────────────── */}
       <div className="panel">
-        <h2>Entity details</h2>
+        <h2>Identification</h2>
         <div className="detail-grid">
           <div className="detail-item">
             <div className="detail-label">Legal name</div>
@@ -83,69 +72,229 @@ export default async function EntityDetailPage({
           </div>
           <div className="detail-item">
             <div className="detail-label">Companies House number</div>
-            <div className="detail-value">
-              {entity.companiesHouseNumber || "—"}
-            </div>
+            <div className="detail-value">{entity.companiesHouseNumber || "—"}</div>
           </div>
           <div className="detail-item">
             <div className="detail-label">Jurisdiction</div>
             <div className="detail-value">{entity.jurisdiction}</div>
           </div>
           <div className="detail-item">
-            <div className="detail-label">Accounting year end</div>
-            <div className="detail-value">{yearEndLabel}</div>
+            <div className="detail-label">Entity type</div>
+            <div className="detail-value">{entity.entityType || "—"}</div>
           </div>
           <div className="detail-item">
-            <div className="detail-label">VAT quarter</div>
-            <div className="detail-value">{vatLabel}</div>
+            <div className="detail-label">UK tax resident</div>
+            <div className="detail-value"><YesNo value={entity.ukTaxResident} /></div>
           </div>
           <div className="detail-item">
             <div className="detail-label">Obligations on record</div>
             <div className="detail-value">{entity._count.obligations}</div>
           </div>
         </div>
-
-        <div style={{ marginTop: 20 }}>
-          <div
-            className="detail-label"
-            style={{ marginBottom: 8 }}
-          >
-            Classification flags
-          </div>
-          <div className="flag-row">
-            {flags.map((f) => (
-              <span
-                key={f.key}
-                className={`badge ${f.active ? "badge-blue" : "badge-grey"}`}
-              >
-                {f.label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginTop: 16, fontSize: 12, color: "#9ca3af" }}>
-          Added {fmtDate(entity.createdAt)} · Last updated{" "}
-          {fmtDate(entity.updatedAt)}
+        <div className="text-muted text-sm" style={{ marginTop: 14 }}>
+          Added {fmtDate(entity.createdAt)} · Last updated {fmtDate(entity.updatedAt)}
         </div>
       </div>
 
-      {/* Upcoming obligations */}
+      {/* ── Corporation Tax ────────────────────────────────── */}
+      <div className="panel">
+        <h2>Corporation Tax</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">CT UTR</div>
+            <div className="detail-value">{entity.corporationTaxUtr || "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">CT return required</div>
+            <div className="detail-value"><YesNo value={entity.ctReturnRequired} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Accounting period start</div>
+            <div className="detail-value">{entity.accountingPeriodStart ? fmtDate(entity.accountingPeriodStart) : "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Accounting period end</div>
+            <div className="detail-value">{entity.accountingPeriodEnd ? fmtDate(entity.accountingPeriodEnd) : "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">CH accounts due</div>
+            <div className="detail-value">{entity.companiesHouseAccountsDue ? fmtDate(entity.companiesHouseAccountsDue) : "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">CT payment method</div>
+            <div className="detail-value">{entity.ctPaymentMethod || "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Taxable profits band</div>
+            <div className="detail-value">{entity.taxableProfitsBand || "—"}</div>
+          </div>
+        </div>
+        <div className="flag-row" style={{ marginTop: 14 }}>
+          {entity.isVeryLargeCompany && <span className="badge badge-purple">Very large (QIPs)</span>}
+          {entity.isLargeCompany && !entity.isVeryLargeCompany && <span className="badge badge-blue">Large company</span>}
+          {!entity.isLargeCompany && !entity.isVeryLargeCompany && <span className="badge badge-grey">Standard</span>}
+        </div>
+      </div>
+
+      {/* ── VAT ───────────────────────────────────────────── */}
+      <div className="panel">
+        <h2>VAT</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">VAT registered</div>
+            <div className="detail-value"><YesNo value={entity.vatRegistered} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">VAT registration number</div>
+            <div className="detail-value">{entity.vatRegistrationNumber || "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">VAT quarter stagger</div>
+            <div className="detail-value">{vatStagger}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Payroll & Employment ───────────────────────────── */}
+      <div className="panel">
+        <h2>Payroll &amp; Employment</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">PAYE registered</div>
+            <div className="detail-value"><YesNo value={entity.payeRegistered} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">ERS scheme present</div>
+            <div className="detail-value"><YesNo value={entity.hasErs} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">EMI scheme present</div>
+            <div className="detail-value"><YesNo value={entity.hasEmi} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">P11D required</div>
+            <div className="detail-value"><YesNo value={entity.p11dRequired} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">PSA required</div>
+            <div className="detail-value"><YesNo value={entity.psaRequired} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── R&D ───────────────────────────────────────────── */}
+      <div className="panel">
+        <h2>Research &amp; Development</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">R&amp;D claim expected</div>
+            <div className="detail-value"><YesNo value={entity.rdClaimExpected} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">R&amp;D notification needed</div>
+            <div className="detail-value"><YesNo value={entity.rdNotificationNeeded} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">R&amp;D additional information form</div>
+            <div className="detail-value"><YesNo value={entity.rdAifNeeded} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Capital Allowances ─────────────────────────────── */}
+      <div className="panel">
+        <h2>Capital Allowances</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">CA activity</div>
+            <div className="detail-value"><YesNo value={entity.capitalAllowancesActivity} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Full expensing relevant</div>
+            <div className="detail-value"><YesNo value={entity.fullExpensingRelevant} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">AIA relevant</div>
+            <div className="detail-value"><YesNo value={entity.aiaRelevant} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Special rate pool relevant</div>
+            <div className="detail-value"><YesNo value={entity.specialRatePoolRelevant} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Group & International ──────────────────────────── */}
+      <div className="panel">
+        <h2>Group &amp; International</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">Group relief relevant</div>
+            <div className="detail-value"><YesNo value={entity.groupReliefRelevant} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Losses brought forward</div>
+            <div className="detail-value"><YesNo value={entity.lossesBroughtForward} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Transfer pricing relevant</div>
+            <div className="detail-value"><YesNo value={entity.transferPricingRelevant} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Pillar 2 in scope</div>
+            <div className="detail-value"><YesNo value={entity.hasPillar2} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Governance ─────────────────────────────────────── */}
+      <div className="panel">
+        <h2>Governance</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">SAO in scope</div>
+            <div className="detail-value"><YesNo value={entity.saoInScope} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">CCO in scope</div>
+            <div className="detail-value"><YesNo value={entity.ccoInScope} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Published tax strategy in scope</div>
+            <div className="detail-value"><YesNo value={entity.publishedTaxStrategyInScope} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Ownership ──────────────────────────────────────── */}
+      <div className="panel">
+        <h2>Ownership</h2>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <div className="detail-label">Primary tax owner</div>
+            <div className="detail-value">{entity.primaryTaxOwner || "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Finance owner</div>
+            <div className="detail-value">{entity.financeOwner || "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Payroll owner</div>
+            <div className="detail-value">{entity.payrollOwner || "—"}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">External adviser</div>
+            <div className="detail-value">{entity.externalAdviser || "—"}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Upcoming obligations ────────────────────────────── */}
       {entity.obligations.length > 0 && (
         <div className="panel">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 14,
-            }}
-          >
-            <h2 style={{ margin: 0 }}>Upcoming obligations (next 90 days)</h2>
-            <Link
-              href={`/entities/${entity.id}/obligations`}
-              className="text-sm"
-            >
+          <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
+            <h2 className="mb0">Upcoming obligations (next 90 days)</h2>
+            <Link href={`/entities/${entity.id}/obligations`} className="text-sm">
               Full calendar →
             </Link>
           </div>
@@ -164,9 +313,7 @@ export default async function EntityDetailPage({
                   <td>{fmtDate(ob.dueDate)}</td>
                   <td>{ob.title}</td>
                   <td className="text-muted text-sm">{ob.period}</td>
-                  <td>
-                    <span className="badge badge-grey">{ob.status}</span>
-                  </td>
+                  <td><span className="badge badge-grey">{ob.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -176,22 +323,18 @@ export default async function EntityDetailPage({
 
       {entity._count.obligations === 0 && (
         <div className="alert alert-info">
-          No obligations have been generated yet.{" "}
+          No obligations generated yet.{" "}
           <Link href={`/entities/${entity.id}/obligations`}>
             Generate the obligations calendar →
           </Link>
         </div>
       )}
 
-      {/* Danger zone */}
-      <div
-        className="panel"
-        style={{ borderColor: "#fecaca", marginTop: 32 }}
-      >
+      {/* ── Danger zone ────────────────────────────────────── */}
+      <div className="panel" style={{ borderColor: "#fecaca", marginTop: 8 }}>
         <h2>Danger zone</h2>
         <p className="text-sm text-muted">
-          Deleting an entity will permanently remove it and all its associated
-          obligations. This cannot be undone.
+          Deleting this entity will permanently remove it and all its obligations. This cannot be undone.
         </p>
         <form action={deleteAction}>
           <button type="submit" className="btn btn-danger btn-sm">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { generateDraftObligations, fmtDate } from "@/lib/obligations";
+import { generateDraftObligations, fmtDate, MONTH_NAMES } from "@/lib/obligations";
 import { saveObligations } from "@/app/actions/entities";
 
 type Obligation = {
@@ -45,20 +45,21 @@ export default async function ObligationsPage({
   if (!entity) notFound();
 
   const rules = await prisma.obligationRule.findMany();
-
-  // Always compute from entity data (live draft)
   const draft = generateDraftObligations(entity, rules);
   const grouped = groupByYear(draft);
 
-  // How many are already saved in DB?
   const savedCount = await prisma.obligation.count({ where: { entityId: id } });
-
   const saveAction = saveObligations.bind(null, id);
 
-  const MONTHS = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
+  const periodEndLabel = entity.accountingPeriodEnd
+    ? `Year end: ${fmtDate(entity.accountingPeriodEnd)}`
+    : "No accounting period set";
+
+  const vatLabel = entity.vatRegistered && entity.vatQuarterEndMonth
+    ? ` · VAT: ${MONTH_NAMES[entity.vatQuarterEndMonth - 1]} stagger`
+    : entity.vatRegistered
+    ? " · VAT registered"
+    : "";
 
   return (
     <>
@@ -67,19 +68,11 @@ export default async function ObligationsPage({
           <div className="breadcrumb">
             <Link href="/">Dashboard</Link> /{" "}
             <Link href="/entities">Entity Register</Link> /{" "}
-            <Link href={`/entities/${id}`}>{entity.legalName}</Link> / Obligations
-            Calendar
+            <Link href={`/entities/${id}`}>{entity.legalName}</Link> / Obligations Calendar
           </div>
           <h1>Obligations Calendar</h1>
-          <p
-            className="text-sm text-muted"
-            style={{ marginTop: 4, marginBottom: 0 }}
-          >
-            {entity.legalName} · Year end:{" "}
-            {entity.accountingYearEndDay} {MONTHS[entity.accountingYearEndMonth - 1]}
-            {entity.vatQuarterEndMonth
-              ? ` · VAT: ${MONTHS[entity.vatQuarterEndMonth - 1]} stagger`
-              : ""}
+          <p className="text-sm text-muted" style={{ marginTop: 4, marginBottom: 0 }}>
+            {entity.legalName} · {periodEndLabel}{vatLabel}
           </p>
         </div>
         <form action={saveAction}>
@@ -90,31 +83,32 @@ export default async function ObligationsPage({
       </div>
 
       <div className="alert alert-info">
-        <strong>Draft calendar</strong> — {draft.length} obligations generated
-        from entity data.{" "}
+        <strong>Draft calendar</strong> — {draft.length} obligations generated from entity data.{" "}
         {savedCount > 0
           ? `${savedCount} obligations currently saved to the database.`
           : "No obligations saved yet. Click \u201cSave to Database\u201d to persist this calendar."}
       </div>
 
+      {!entity.accountingPeriodEnd && entity.ctReturnRequired && (
+        <div className="alert alert-warning">
+          <strong>Accounting period end not set.</strong> CT600 and corporation tax payment obligations cannot be generated.{" "}
+          <Link href={`/entities/${id}/edit`}>Edit entity →</Link>
+        </div>
+      )}
+
       {/* Entity flags summary */}
-      <div
-        className="panel"
-        style={{ padding: "12px 16px", marginBottom: 16 }}
-      >
+      <div className="panel" style={{ padding: "12px 16px", marginBottom: 16 }}>
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: 12, color: "#6b7280" }}>
           <span>
             <strong style={{ color: "#374151" }}>CT regime:</strong>{" "}
-            {entity.isVeryLargeCompany
-              ? "Very large (QIPs)"
-              : entity.isLargeCompany
-              ? "Large"
-              : "Standard"}
+            {entity.isVeryLargeCompany ? "Very large (QIPs)" : entity.isLargeCompany ? "Large" : "Standard"}
           </span>
           <span>
             <strong style={{ color: "#374151" }}>VAT:</strong>{" "}
-            {entity.vatQuarterEndMonth
-              ? `Registered (${MONTHS[entity.vatQuarterEndMonth - 1]} stagger)`
+            {entity.vatRegistered && entity.vatQuarterEndMonth
+              ? `Registered (${MONTH_NAMES[entity.vatQuarterEndMonth - 1]} stagger)`
+              : entity.vatRegistered
+              ? "Registered (no stagger set)"
               : "Not registered"}
           </span>
           <span>
@@ -128,14 +122,12 @@ export default async function ObligationsPage({
         </div>
       </div>
 
-      {/* Obligations table grouped by year */}
+      {/* Obligations grouped by year */}
       {grouped.map(([year, obs]) => (
         <div key={year} style={{ marginBottom: 24 }}>
           <table className="data-table">
             <thead className="year-group">
-              <tr>
-                <th colSpan={4}>{year}</th>
-              </tr>
+              <tr><th colSpan={4}>{year}</th></tr>
             </thead>
             <thead>
               <tr>
@@ -148,16 +140,10 @@ export default async function ObligationsPage({
             <tbody>
               {obs.map((ob, i) => (
                 <tr key={`${ob.ruleKey}-${i}`}>
-                  <td className={dueDateClass(ob.dueDate)}>
-                    {fmtDate(ob.dueDate)}
-                  </td>
+                  <td className={dueDateClass(ob.dueDate)}>{fmtDate(ob.dueDate)}</td>
                   <td>{ob.title}</td>
                   <td className="text-muted text-sm">{ob.period}</td>
-                  <td>
-                    <span className="badge badge-grey text-sm">
-                      {ob.ruleKey}
-                    </span>
-                  </td>
+                  <td><span className="badge badge-grey text-sm">{ob.ruleKey}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -168,12 +154,12 @@ export default async function ObligationsPage({
       {draft.length === 0 && (
         <div className="panel" style={{ textAlign: "center", padding: "40px 24px" }}>
           <p className="text-muted">
-            No obligations could be generated. Check that the obligation rules
-            have been seeded.
+            No obligations could be generated. Set the accounting period end date and ensure obligation rules are seeded.
           </p>
-          <Link href="/rules" className="btn btn-secondary mt16">
-            View obligation rules
-          </Link>
+          <div className="flex gap8" style={{ justifyContent: "center", marginTop: 12 }}>
+            <Link href={`/entities/${id}/edit`} className="btn btn-primary">Edit entity</Link>
+            <Link href="/rules" className="btn btn-secondary">View obligation rules</Link>
+          </div>
         </div>
       )}
     </>

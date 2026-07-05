@@ -1,0 +1,2 @@
+- [Project file layout](project-layout.md) — Next.js app coexists with leftover Vite scaffold; only specific src/ paths are active Next.js code.
+- [Entity schema — accounting period](entity-schema-ap.md) — AP stored as DateTime? fields, not integers; obligations engine extracts month/day from the date.

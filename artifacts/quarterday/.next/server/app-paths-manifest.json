@@ -1,5 +1,5 @@
 {
-  "/entities/[id]/obligations/page": "app/entities/[id]/obligations/page.js",
   "/page": "app/page.js",
+  "/entities/new/page": "app/entities/new/page.js",
   "/entities/page": "app/entities/page.js"
 }

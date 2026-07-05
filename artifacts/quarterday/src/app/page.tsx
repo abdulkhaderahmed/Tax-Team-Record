@@ -138,7 +138,7 @@ export default async function DashboardPage() {
               <tr>
                 <th>Legal Name</th>
                 <th>Jurisdiction</th>
-                <th>Year End</th>
+                <th>Period End</th>
                 <th>Added</th>
               </tr>
             </thead>
@@ -150,12 +150,7 @@ export default async function DashboardPage() {
                   </td>
                   <td>{e.jurisdiction}</td>
                   <td>
-                    {e.accountingYearEndDay}{" "}
-                    {new Date(
-                      2000,
-                      e.accountingYearEndMonth - 1,
-                      1
-                    ).toLocaleString("en-GB", { month: "short" })}
+                    {e.accountingPeriodEnd ? fmtDate(e.accountingPeriodEnd) : "—"}
                   </td>
                   <td className="text-muted text-sm">
                     {fmtDate(e.createdAt)}

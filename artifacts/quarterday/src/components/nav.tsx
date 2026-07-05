@@ -12,19 +12,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="sidebar">
         <div className="nav-section-label">Navigation</div>
-        <Link href="/" className="nav-link">
-          Dashboard
-        </Link>
-        <Link href="/entities" className="nav-link">
-          Entity Register
-        </Link>
+        <Link href="/" className="nav-link">Dashboard</Link>
+        <Link href="/entities" className="nav-link">Entity Register</Link>
 
-        <div className="nav-section-label" style={{ marginTop: 16 }}>
-          Reference
-        </div>
-        <Link href="/rules" className="nav-link">
-          Obligation Rules
-        </Link>
+        <div className="nav-section-label" style={{ marginTop: 8 }}>Reference</div>
+        <Link href="/rules" className="nav-link">Obligation Rules</Link>
       </nav>
 
       <main className="main">{children}</main>

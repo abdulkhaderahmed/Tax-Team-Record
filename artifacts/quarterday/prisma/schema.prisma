@@ -32,21 +32,70 @@ model User {
 }
 
 model Entity {
-  id                     String       @id @default(cuid())
-  organisationId         String
-  organisation           Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  legalName              String
-  companiesHouseNumber   String?
-  jurisdiction           String       @default("England & Wales")
-  accountingYearEndMonth Int
-  accountingYearEndDay   Int
-  vatQuarterEndMonth     Int?
-  isLargeCompany         Boolean      @default(false)
-  isVeryLargeCompany     Boolean      @default(false)
-  hasErs                 Boolean      @default(false)
-  hasPillar2             Boolean      @default(false)
-  createdAt              DateTime     @default(now())
-  updatedAt              DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  // Identification
+  legalName            String
+  companiesHouseNumber String?
+  jurisdiction         String  @default("England & Wales")
+  entityType           String?
+  ukTaxResident        Boolean @default(true)
+
+  // Corporation Tax
+  corporationTaxUtr         String?
+  accountingPeriodStart     DateTime?
+  accountingPeriodEnd       DateTime?
+  companiesHouseAccountsDue DateTime?
+  ctReturnRequired          Boolean   @default(true)
+  ctPaymentMethod           String?
+  isLargeCompany            Boolean   @default(false)
+  isVeryLargeCompany        Boolean   @default(false)
+  taxableProfitsBand        String?
+
+  // VAT
+  vatRegistered         Boolean @default(false)
+  vatRegistrationNumber String?
+  vatQuarterEndMonth    Int?
+
+  // Payroll & Employment
+  payeRegistered Boolean @default(false)
+  hasErs         Boolean @default(false)
+  hasEmi         Boolean @default(false)
+  p11dRequired   Boolean @default(false)
+  psaRequired    Boolean @default(false)
+
+  // R&D
+  rdClaimExpected      Boolean @default(false)
+  rdNotificationNeeded Boolean @default(false)
+  rdAifNeeded          Boolean @default(false)
+
+  // Capital Allowances
+  capitalAllowancesActivity Boolean @default(false)
+  fullExpensingRelevant     Boolean @default(false)
+  aiaRelevant               Boolean @default(false)
+  specialRatePoolRelevant   Boolean @default(false)
+
+  // Group & International
+  groupReliefRelevant     Boolean @default(false)
+  lossesBroughtForward    Boolean @default(false)
+  transferPricingRelevant Boolean @default(false)
+  hasPillar2              Boolean @default(false)
+
+  // Governance
+  saoInScope                  Boolean @default(false)
+  ccoInScope                  Boolean @default(false)
+  publishedTaxStrategyInScope Boolean @default(false)
+
+  // Ownership
+  primaryTaxOwner String?
+  financeOwner    String?
+  payrollOwner    String?
+  externalAdviser String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   obligations Obligation[]
   auditEvents AuditEvent[]
