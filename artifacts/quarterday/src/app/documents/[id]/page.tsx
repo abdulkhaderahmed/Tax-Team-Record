@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/nav";
 import { prisma } from "@/lib/prisma";
 import { archiveDocument } from "@/app/actions/documents";
+import { startExtraction } from "@/app/actions/extraction";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HEALTH_MARKERS } from "@/lib/doc-constants";
@@ -25,19 +26,28 @@ export default async function DocumentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const doc = await prisma.document.findUnique({
-    where: { id },
-    include: {
-      entity: { select: { id: true, legalName: true } },
-      sourceSystem: { select: { id: true, name: true } },
-      chunks: { orderBy: { chunkIndex: "asc" } },
-      healthFlags: { orderBy: { chunkIndex: "asc" } },
-    },
-  });
+  const [doc, extractionRuns] = await Promise.all([
+    prisma.document.findUnique({
+      where: { id },
+      include: {
+        entity: { select: { id: true, legalName: true } },
+        sourceSystem: { select: { id: true, name: true } },
+        chunks: { orderBy: { chunkIndex: "asc" } },
+        healthFlags: { orderBy: { chunkIndex: "asc" } },
+      },
+    }),
+    prisma.extractionRun.findMany({
+      where: { documentId: id },
+      include: { items: { select: { reviewStatus: true } } },
+      orderBy: { startedAt: "desc" },
+    }),
+  ]);
   if (!doc || doc.organisationId !== ORG_ID) notFound();
 
   const archive = archiveDocument.bind(null, doc.id);
+  const extract = startExtraction.bind(null, doc.id);
   const isArchived = doc.status === "Archived";
+  const hasText = doc.chunks.length > 0 && doc.chunks[0].text.length > 0;
 
   // Group health flags by marker key
   const flagsByMarker: Record<string, typeof doc.healthFlags> = {};
@@ -74,8 +84,13 @@ export default async function DocumentDetailPage({
               </span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <a href={`/api/documents/${doc.id}/file`} className="btn">Download</a>
+            {!isArchived && hasText && (
+              <form action={extract} style={{ display: "inline" }}>
+                <button type="submit" className="btn btn-primary">Run AI Extraction</button>
+              </form>
+            )}
             {!isArchived && (
               <Link href={`/documents/${doc.id}/edit`} className="btn">Edit</Link>
             )}
@@ -263,7 +278,7 @@ export default async function DocumentDetailPage({
 
         {/* Extracted text */}
         {fullText && (
-          <div className="panel">
+          <div className="panel" style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h2 style={{ margin: 0 }}>Extracted text</h2>
               <span style={{ color: "#6b7280", fontSize: 12 }}>{fullText.length.toLocaleString()} characters</span>
@@ -278,6 +293,74 @@ export default async function DocumentDetailPage({
             </div>
           </div>
         )}
+
+        {/* AI Extraction runs */}
+        <div className="panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h2 style={{ margin: 0 }}>AI Extraction runs</h2>
+            {hasText && !isArchived && (
+              <form action={extract}>
+                <button type="submit" className="btn btn-primary btn-sm">Run new extraction</button>
+              </form>
+            )}
+          </div>
+
+          {!hasText && (
+            <p style={{ color: "#6b7280", fontSize: 13 }}>
+              AI extraction requires extracted text. Upload a PDF or DOCX document with readable content first.
+            </p>
+          )}
+
+          {hasText && extractionRuns.length === 0 && (
+            <p style={{ color: "#6b7280", fontSize: 13 }}>
+              No extraction runs yet. Click "Run AI Extraction" to have the AI identify obligations, actions, assumptions, and other structured items from this document.
+            </p>
+          )}
+
+          {extractionRuns.length > 0 && (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Model</th>
+                  <th>Status</th>
+                  <th>Items</th>
+                  <th>Reviewed</th>
+                  <th>Confirmed</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {extractionRuns.map((run) => {
+                  const total = run.items.length;
+                  const reviewed = run.items.filter(i => !["Needs review","In review"].includes(i.reviewStatus)).length;
+                  const confirmed = run.items.filter(i => ["Confirmed","Edited and confirmed"].includes(i.reviewStatus)).length;
+                  return (
+                    <tr key={run.id}>
+                      <td style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
+                        {run.startedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                      <td style={{ fontSize: 12 }}>{run.modelProvider} / {run.modelName}</td>
+                      <td>
+                        <span className={`badge ${run.status === "Completed" ? "badge-green" : run.status === "Failed" ? "badge-red" : run.status === "Running" ? "badge-blue" : "badge-grey"}`}>
+                          {run.status}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13 }}>{total}</td>
+                      <td style={{ fontSize: 13 }}>{reviewed}/{total}</td>
+                      <td style={{ fontSize: 13, color: confirmed > 0 ? "#15803d" : "#6b7280" }}>{confirmed}</td>
+                      <td>
+                        <Link href={`/documents/${doc.id}/extraction/${run.id}`} className="btn btn-sm">
+                          Review →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </AppShell>
   );

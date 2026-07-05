@@ -269,8 +269,10 @@ model Document {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  chunks      DocumentChunk[]
-  healthFlags DocumentHealthFlag[]
+  chunks         DocumentChunk[]
+  healthFlags    DocumentHealthFlag[]
+  extractionRuns ExtractionRun[]
+  reviewItems    ReviewItem[]
 
   @@index([organisationId])
   @@index([entityId])
@@ -301,6 +303,92 @@ model DocumentHealthFlag {
   createdAt  DateTime @default(now())
 
   @@index([documentId])
+}
+
+// ── AI Extraction ─────────────────────────────────────────────
+
+model ExtractionRun {
+  id             String   @id @default(cuid())
+  organisationId String
+  documentId     String
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  modelProvider        String  @default("openai")
+  modelName            String  @default("gpt-4o")
+  promptVersion        String  @default("1")
+  extractionSchemaVersion String @default("1")
+
+  startedAt          DateTime  @default(now())
+  completedAt        DateTime?
+  status             String    @default("Pending") // Pending | Running | Completed | Failed | Partially failed
+  errorMessage       String?
+  totalChunksProcessed Int     @default(0)
+  createdBy          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items ReviewItem[]
+
+  @@index([organisationId])
+  @@index([documentId])
+  @@index([status])
+}
+
+model ReviewItem {
+  id              String        @id @default(cuid())
+  extractionRunId String
+  extractionRun   ExtractionRun @relation(fields: [extractionRunId], references: [id], onDelete: Cascade)
+  documentId      String
+  document        Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  entityId        String?
+
+  // What was extracted
+  itemType          String // obligation | action | assumption | caveat | tripwire | evidence | valuation | rd | capital_allowances | conflict
+  structuredJson    Json
+  plainSummary      String
+  confidenceScore   Float   @default(0)
+
+  // Source provenance
+  sourceChunkId     String?
+  sourcePageSection String?
+  sourceTextExcerpt String?
+
+  // Conditions / caveats
+  conditionText  String?
+  assumptionText String?
+  caveatText     String?
+  isConditional  Boolean @default(false)
+  isDraft        Boolean @default(false)
+  requiresHumanTaxReview    Boolean @default(true)
+  requiresSourceVerification Boolean @default(false)
+
+  // Suggested fields (for creating live objects)
+  suggestedRegime           String?
+  suggestedObligationType   String?
+  suggestedDeadline         DateTime?
+  suggestedOwner            String?
+  suggestedEvidenceRequired String?
+  suggestedSourceSystemId   String?
+
+  // Review workflow
+  reviewStatus  String  @default("Needs review") // Needs review | In review | Confirmed | Edited and confirmed | Rejected | Duplicate | Not applicable | Needs adviser input | Needs source verification
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewerNotes String?
+  rejectionReason String?
+
+  // Link to live object created from this item
+  createdLiveObjectType String?
+  createdLiveObjectId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([extractionRunId])
+  @@index([documentId])
+  @@index([itemType])
+  @@index([reviewStatus])
 }
 
 // ── Source Systems ────────────────────────────────────────────

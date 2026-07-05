@@ -1,2 +1,3 @@
 - [Next.js file serving quirks](nextjs-file-serving.md) — Buffer → NextResponse needs Uint8Array wrap; pdf-parse uses require() not ESM import.
 - [Document Vault build notes](document-vault.md) — mammoth ships own types (no @types/mammoth); bodySizeLimit in experimental.serverActions; uploads stored in process.cwd()/uploads/.
+- [AI extraction pattern](ai-extraction.md) — Prisma Json field needs `as object` cast from `Record<string,unknown>`; use `response_format: json_schema` with strict:true for structured output.
