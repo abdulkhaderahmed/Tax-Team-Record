@@ -16,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/entities" className="nav-link">Entity Register</Link>
         <Link href="/obligations" className="nav-link">Obligation Register</Link>
         <Link href="/obligations/drafts" className="nav-link">Draft Obligations</Link>
+        <Link href="/documents" className="nav-link">Document Vault</Link>
 
         <div className="nav-section-label" style={{ marginTop: 8 }}>Sources</div>
         <Link href="/sources" className="nav-link">Source Systems</Link>

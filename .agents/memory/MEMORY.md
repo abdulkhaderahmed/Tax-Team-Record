@@ -1,3 +1,2 @@
-- [Project file layout](project-layout.md) — Next.js app coexists with leftover Vite scaffold; only specific src/ paths are active Next.js code.
-- [Entity schema — accounting period](entity-schema-ap.md) — AP stored as DateTime? fields, not integers; obligations engine extracts month/day from the date.
-- [Prisma dev-mode singleton cache](prisma-dev-cache-gotcha.md) — after any migrate/generate, must restart the workflow or new model accessors won't exist at runtime.
+- [Next.js file serving quirks](nextjs-file-serving.md) — Buffer → NextResponse needs Uint8Array wrap; pdf-parse uses require() not ESM import.
+- [Document Vault build notes](document-vault.md) — mammoth ships own types (no @types/mammoth); bodySizeLimit in experimental.serverActions; uploads stored in process.cwd()/uploads/.

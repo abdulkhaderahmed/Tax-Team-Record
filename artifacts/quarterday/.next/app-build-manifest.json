@@ -11,20 +11,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/sources/page": [
+    "/documents/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/sources/page.js"
+      "static/chunks/app/documents/page.js"
     ],
-    "/sources/priority-rules/page": [
+    "/documents/new/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/sources/priority-rules/page.js"
-    ],
-    "/sources/data-categories/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/sources/data-categories/page.js"
+      "static/chunks/app/documents/new/page.js"
     ]
   }
 }

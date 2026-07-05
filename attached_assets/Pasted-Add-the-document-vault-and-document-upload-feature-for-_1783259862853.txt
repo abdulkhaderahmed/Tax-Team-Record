@@ -1,0 +1,132 @@
+Add the document vault and document upload feature for Quarterday.
+
+Purpose:
+This feature lets an in-house tax team safely store tax-relevant documents, classify them, extract plain text, and prepare them for later human-reviewed AI extraction.
+
+This is not the AI extraction step yet.
+Do not extract obligations with AI yet.
+Do not write anything into the obligations register yet.
+
+Users should be able to:
+1. Upload PDF documents.
+2. Upload DOCX documents.
+3. View all uploaded documents.
+4. Open a document detail page.
+5. See extracted plain text.
+6. Edit document metadata.
+7. Archive a document.
+8. Download the original document.
+
+Document types should include:
+1. Adviser proposal.
+2. Adviser tax memo.
+3. Steps paper.
+4. Valuation report.
+5. R&D report.
+6. R&D claim schedule.
+7. Capital allowances analysis.
+8. Fixed asset register.
+9. CT computation.
+10. CT600 draft/final.
+11. VAT return.
+12. ERS return.
+13. EMI return.
+14. P11D/P11D(b).
+15. PSA calculation.
+16. Payroll report.
+17. HR report.
+18. Cap table.
+19. Legal agreement.
+20. Board minutes/approval.
+21. HMRC correspondence.
+22. Filing confirmation.
+23. Payment evidence.
+24. Other.
+
+For each document, store these fields:
+
+Core metadata:
+1. Filename.
+2. File type.
+3. File size.
+4. Content hash.
+5. Upload date.
+6. Uploaded by.
+7. Organisation.
+8. Related entity, optional.
+9. Related obligation, optional.
+10. Related action, optional.
+11. Related source system, optional.
+12. Document type.
+13. Document date.
+14. Period start date, optional.
+15. Period end date, optional.
+16. Adviser/provider name, optional.
+17. Version label, optional.
+18. Status: Uploaded, Text extracted, Extraction failed, Archived.
+
+Security and sensitivity:
+1. Sensitivity level: Low, Medium, High, Highly confidential.
+2. Privilege status: Not privileged, Potentially privileged, Legally privileged, Unknown.
+3. Contains personal data? yes/no/unknown.
+4. Contains special category data? yes/no/unknown.
+5. Contains payroll data? yes/no/unknown.
+6. Contains M&A/restructuring data? yes/no/unknown.
+7. Restricted access? yes/no.
+8. Access notes.
+
+Source and reliance:
+1. Source system.
+2. Is this an authoritative source? yes/no/unknown.
+3. Source confidence: High, Medium, Low, Unknown.
+4. Supersedes document, optional.
+5. Superseded by document, optional.
+6. Reliance status: Draft, Under review, Approved for reliance, Superseded, Do not rely.
+
+Text extraction:
+1. Extract plain text from PDF and DOCX.
+2. Store extracted text in document_chunks.
+3. Preserve page number or section number where possible.
+4. Show extracted text on the document detail page.
+5. Show extraction status.
+6. Show extraction errors if extraction fails.
+
+For now, if page numbers cannot be extracted reliably, store chunk numbers instead.
+
+Add a document detail page showing:
+1. Metadata.
+2. Security/sensitivity classification.
+3. Source/reliance classification.
+4. Extracted text.
+5. Related entity.
+6. Related obligation/action, if any.
+7. Upload and extraction history.
+
+Add a document list page with filters:
+1. Document type.
+2. Related entity.
+3. Sensitivity level.
+4. Privilege status.
+5. Reliance status.
+6. Upload date.
+7. Uploaded by.
+8. Extraction status.
+
+Add warnings:
+1. “Potentially privileged document.”
+2. “Highly confidential document.”
+3. “Contains personal data.”
+4. “Document is draft or not approved for reliance.”
+5. “Document has been superseded.”
+6. “Text extraction failed.”
+7. “No related entity selected.”
+
+Add basic deterministic Health Check preparation, but do not build the Health Check report yet.
+
+When text is extracted, store enough information to later check for:
+1. XX.
+2. TBC.
+3. [insert client name].
+4. <<Date>>.
+5. do/do not.
+6. wrong

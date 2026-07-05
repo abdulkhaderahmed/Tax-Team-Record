@@ -20,6 +20,7 @@ model Organisation {
   sourceSystems      SourceSystem[]
   sourcePriorityRules SourcePriorityRule[]
   sourceConflicts    SourceConflict[]
+  documents          Document[]
 }
 
 model User {
@@ -105,6 +106,7 @@ model Entity {
   auditEvents       AuditEvent[]
   manualObligations ManualObligation[]
   sourceConflicts   SourceConflict[]
+  documents         Document[]
 }
 
 model ObligationRule {
@@ -213,6 +215,94 @@ model ManualObligation {
   @@index([overallWorkflowStatus])
 }
 
+// ── Document Vault ────────────────────────────────────────────
+
+model Document {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId   String?
+  sourceSystemId String?
+  sourceSystem   SourceSystem? @relation("DocumentSourceSystem", fields: [sourceSystemId], references: [id])
+
+  // File metadata
+  filename    String
+  fileType    String   // pdf | docx
+  fileSize    Int
+  contentHash String
+  storageKey  String
+  uploadedAt  DateTime @default(now())
+  uploadedBy  String?
+
+  // Document classification
+  documentType  String
+  documentDate  DateTime?
+  periodStart   DateTime?
+  periodEnd     DateTime?
+  adviserName   String?
+  versionLabel  String?
+  status        String    @default("Uploaded") // Uploaded | Text extracted | Extraction failed | Archived
+
+  // Security & sensitivity
+  sensitivityLevel        String  @default("Low")     // Low | Medium | High | Highly confidential
+  privilegeStatus         String  @default("Unknown") // Not privileged | Potentially privileged | Legally privileged | Unknown
+  containsPersonalData    String  @default("Unknown") // Yes | No | Unknown
+  containsSpecialCategory String  @default("Unknown")
+  containsPayrollData     String  @default("Unknown")
+  containsMaData          String  @default("Unknown")
+  restrictedAccess        Boolean @default(false)
+  accessNotes             String?
+
+  // Source & reliance
+  isAuthoritativeSource  String @default("Unknown") // Yes | No | Unknown
+  sourceConfidence       String @default("Unknown") // High | Medium | Low | Unknown
+  supersedesDocumentId   String?
+  supersededByDocumentId String?
+  relianceStatus         String @default("Draft") // Draft | Under review | Approved for reliance | Superseded | Do not rely
+
+  // Extraction
+  extractionError String?
+
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  chunks      DocumentChunk[]
+  healthFlags DocumentHealthFlag[]
+
+  @@index([organisationId])
+  @@index([entityId])
+  @@index([documentType])
+  @@index([status])
+  @@index([uploadedAt])
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex Int
+  pageNumber Int?
+  text       String
+
+  @@index([documentId])
+}
+
+model DocumentHealthFlag {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  marker     String
+  context    String?
+  chunkIndex Int?
+  pageNumber Int?
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+}
+
 // ── Source Systems ────────────────────────────────────────────
 
 model SourceSystem {
@@ -241,6 +331,7 @@ model SourceSystem {
   conflictsAsA           SourceConflict[]     @relation("ConflictSourceA")
   conflictsAsB           SourceConflict[]     @relation("ConflictSourceB")
   obligationSourceRefs   ObligationSourceRef[]
+  documents              Document[]           @relation("DocumentSourceSystem")
 
   @@index([organisationId])
 }

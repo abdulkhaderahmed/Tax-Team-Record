@@ -1,5 +1,45 @@
 {
-  "node": {},
+  "node": {
+    "404016f6b2030037233f6b3accfcfea95d17741f95": {
+      "workers": {
+        "app/documents/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fdocuments.ts%22%2C%5B%7B%22id%22%3A%22404016f6b2030037233f6b3accfcfea95d17741f95%22%2C%22exportedName%22%3A%22archiveDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%2C%7B%22id%22%3A%224073d82217b49aa77f9a691d0bcc1e1273be687c0b%22%2C%22exportedName%22%3A%22uploadDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%2C%7B%22id%22%3A%2260dac2cba5ae9718267c5914409fc46286fb5923d9%22%2C%22exportedName%22%3A%22updateDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/documents/new/page": "rsc"
+      },
+      "filename": "app/actions/documents.ts",
+      "exportedName": "archiveDocument"
+    },
+    "4073d82217b49aa77f9a691d0bcc1e1273be687c0b": {
+      "workers": {
+        "app/documents/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fdocuments.ts%22%2C%5B%7B%22id%22%3A%22404016f6b2030037233f6b3accfcfea95d17741f95%22%2C%22exportedName%22%3A%22archiveDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%2C%7B%22id%22%3A%224073d82217b49aa77f9a691d0bcc1e1273be687c0b%22%2C%22exportedName%22%3A%22uploadDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%2C%7B%22id%22%3A%2260dac2cba5ae9718267c5914409fc46286fb5923d9%22%2C%22exportedName%22%3A%22updateDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/documents/new/page": "rsc"
+      },
+      "filename": "app/actions/documents.ts",
+      "exportedName": "uploadDocument"
+    },
+    "60dac2cba5ae9718267c5914409fc46286fb5923d9": {
+      "workers": {
+        "app/documents/new/page": {
+          "moduleId": "(rsc)/../../node_modules/.pnpm/next@15.5.20_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fhome%2Frunner%2Fworkspace%2Fartifacts%2Fquarterday%2Fsrc%2Fapp%2Factions%2Fdocuments.ts%22%2C%5B%7B%22id%22%3A%22404016f6b2030037233f6b3accfcfea95d17741f95%22%2C%22exportedName%22%3A%22archiveDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%2C%7B%22id%22%3A%224073d82217b49aa77f9a691d0bcc1e1273be687c0b%22%2C%22exportedName%22%3A%22uploadDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%2C%7B%22id%22%3A%2260dac2cba5ae9718267c5914409fc46286fb5923d9%22%2C%22exportedName%22%3A%22updateDocument%22%2C%22filename%22%3A%22app%2Factions%2Fdocuments.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/documents/new/page": "rsc"
+      },
+      "filename": "app/actions/documents.ts",
+      "exportedName": "updateDocument"
+    }
+  },
   "edge": {},
   "encryptionKey": "3rqxxQY27UeMpCsFfNZRLCvH876MwfpMJ6AJdoZTDYw="
 }

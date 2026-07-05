@@ -1,6 +1,5 @@
 {
   "/page": "app/page.js",
-  "/sources/page": "app/sources/page.js",
-  "/sources/priority-rules/page": "app/sources/priority-rules/page.js",
-  "/sources/data-categories/page": "app/sources/data-categories/page.js"
+  "/documents/page": "app/documents/page.js",
+  "/documents/new/page": "app/documents/new/page.js"
 }
