@@ -1,0 +1,229 @@
+Add AI-assisted extraction into a human review queue for Quarterday.
+
+Purpose:
+The AI should help convert tax documents into structured draft items, but it must never write directly into the live system-of-record registers.
+
+Important:
+AI output is draft only.
+Humans must confirm, edit or reject every extracted item.
+Do not create live obligations, actions, assumptions or tripwires automatically.
+Do not make tax judgements.
+Do not calculate tax.
+Do not file anything with HMRC.
+
+The AI should extract these item types:
+1. Obligations.
+2. Actions.
+3. Assumptions.
+4. Caveats and conditions.
+5. Tripwires.
+6. Evidence requirements.
+7. Valuation references.
+8. R&D claim references.
+9. Capital allowances references.
+10. Source conflicts or uncertainty flags.
+
+Extraction should run only from documents that already exist in the document vault and have extracted text/chunks.
+
+Create or update these database tables:
+
+1. extraction_runs
+2. review_items
+
+extraction_runs should include:
+1. Document.
+2. Model provider.
+3. Model name.
+4. Prompt version.
+5. Extraction schema version.
+6. Started at.
+7. Completed at.
+8. Status: Pending, Running, Completed, Failed.
+9. Error message.
+10. Total chunks processed.
+11. Created by.
+
+review_items should include:
+1. Extraction run.
+2. Document.
+3. Related entity, optional.
+4. Item type.
+5. Structured JSON.
+6. Plain English summary.
+7. Confidence score.
+8. Source chunk ID.
+9. Source page or section, if available.
+10. Source text excerpt.
+11. Condition text, if applicable.
+12. Assumption text, if applicable.
+13. Caveat text, if applicable.
+14. Suggested regime.
+15. Suggested obligation type.
+16. Suggested deadline, if available.
+17. Suggested owner, if available.
+18. Suggested evidence requirement, if available.
+19. Suggested source system, if available.
+20. Review status.
+21. Reviewed by.
+22. Reviewed at.
+23. Reviewer notes.
+24. Rejection reason.
+25. Created live object type, optional.
+26. Created live object ID, optional.
+
+Review status should include:
+1. Needs review.
+2. In review.
+3. Confirmed.
+4. Edited and confirmed.
+5. Rejected.
+6. Duplicate.
+7. Not applicable.
+8. Needs adviser input.
+9. Needs source verification.
+
+Use strict structured output.
+
+The AI extraction response should be validated before saving.
+Use Zod or JSON schema validation.
+If the AI output does not match the schema:
+1. Do not save it as confirmed data.
+2. Save the extraction run as failed or partially failed.
+3. Show a useful error message.
+
+The extraction schema should preserve uncertainty.
+
+For each extracted item, the AI must identify:
+1. Whether the item is definite or conditional.
+2. The condition, if conditional.
+3. Whether the source text says “subject to”, “provided that”, “assuming”, “based on”, “if”, “unless”, or similar.
+4. Whether human tax review is required.
+5. Whether source verification is required.
+6. Whether the document appears to be draft or final.
+
+The AI must not convert conditional advice into definite obligations.
+
+Examples:
+- If the document says “if the company is very large, QIPs may apply”, save this as conditional.
+- If the document says “subject to confirmation of employee residence”, save the residence point as an assumption or caveat.
+- If the document says “based on the facts provided”, save the relevant facts as assumptions where possible.
+
+Extract obligations with fields:
+1. Regime.
+2. Obligation type.
+3. Description.
+4. Filing deadline.
+5. Payment deadline.
+6. Period start.
+7. Period end.
+8. Recurrence.
+9. Statutory basis.
+10. Condition text.
+11. Evidence required.
+12. Suggested owner.
+13. Source text.
+14. Source chunk/page.
+15. Confidence score.
+
+Extract actions with fields:
+1. Description.
+2. Responsible party, if stated.
+3. Accountable party, if stated.
+4. External owner, if stated.
+5. Deadline.
+6. Relative deadline trigger, if applicable.
+7. Relative deadline offset, if applicable.
+8. Evidence required.
+9. Condition text.
+10. Source text.
+11. Source chunk/page.
+12. Confidence score.
+
+Extract assumptions with fields:
+1. Assumption statement.
+2. Fact category.
+3. Source text.
+4. Source chunk/page.
+5. Reliance importance: Low, Medium, High, Critical.
+6. Suggested review cadence.
+7. Condition or caveat linked to the assumption.
+8. Confidence score.
+
+Extract caveats and conditions with fields:
+1. Caveat/condition text.
+2. Related topic.
+3. Related obligation/action/assumption, if identifiable.
+4. Impact if false or unresolved.
+5. Source text.
+6. Source chunk/page.
+7. Confidence score.
+
+Extract tripwires with fields:
+1. Description.
+2. Trigger event.
+3. Review date or deadline.
+4. Review cadence.
+5. Disarm condition.
+6. Source text.
+7. Source chunk/page.
+8. Confidence score.
+
+Extract R&D references only as workflow/review items:
+1. R&D claim expected.
+2. Claim notification mentioned.
+3. Additional information form mentioned.
+4. Technical evidence required.
+5. Adviser review required.
+6. CT600 linkage mentioned.
+Do not calculate R&D claim value.
+Do not decide whether the claim qualifies.
+
+Extract capital allowances references only as workflow/review items:
+1. Fixed asset register review.
+2. Capital expenditure evidence.
+3. AIA mentioned.
+4. Full expensing mentioned.
+5. Special rate pool mentioned.
+6. CT computation linkage.
+Do not calculate allowances.
+Do not calculate pools.
+
+Build a review page.
+
+The review page should show:
+1. Document name.
+2. Extraction run status.
+3. Review item type.
+4. Plain English summary.
+5. Source text excerpt.
+6. Source page/chunk.
+7. Confidence score.
+8. Condition/caveat warning.
+9. Suggested structured fields.
+10. Review status.
+11. Reviewer notes.
+
+The user should be able to:
+1. Confirm item.
+2. Edit item and confirm.
+3. Reject item.
+4. Mark duplicate.
+5. Mark not applicable.
+6. Mark needs adviser input.
+7. Mark needs source verification.
+8. Link the item to an entity.
+9. Link the item to an existing obligation/action/assumption.
+10. Create a new live obligation/action/assumption/tripwire from the confirmed item.
+
+When confirming an item:
+1. Show the structured fields before creation.
+2. Require an entity if the live object needs one.
+3. Preserve the source document and source chunk/page.
+4. Preserve condition text.
+5. Preserve assumption/caveat links where available.
+6. Create an audit event.
+7. Create the live object only after confirmation.
+
+If the item is low confidence:
+1. Show a warning.
+2
