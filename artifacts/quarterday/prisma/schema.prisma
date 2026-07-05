@@ -13,8 +13,9 @@ model Organisation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users    User[]
-  entities Entity[]
+  users       User[]
+  entities    Entity[]
+  auditEvents AuditEvent[]
 }
 
 model User {
@@ -26,26 +27,29 @@ model User {
   role           String       @default("member")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  auditEvents AuditEvent[]
 }
 
 model Entity {
-  id                   String       @id @default(cuid())
-  organisationId       String
-  organisation         Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  legalName            String
-  companiesHouseNumber String?
-  jurisdiction         String       @default("England & Wales")
+  id                     String       @id @default(cuid())
+  organisationId         String
+  organisation           Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  legalName              String
+  companiesHouseNumber   String?
+  jurisdiction           String       @default("England & Wales")
   accountingYearEndMonth Int
   accountingYearEndDay   Int
-  vatQuarterEndMonth   Int?
-  isLargeCompany       Boolean      @default(false)
-  isVeryLargeCompany   Boolean      @default(false)
-  hasErs               Boolean      @default(false)
-  hasPillar2           Boolean      @default(false)
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  vatQuarterEndMonth     Int?
+  isLargeCompany         Boolean      @default(false)
+  isVeryLargeCompany     Boolean      @default(false)
+  hasErs                 Boolean      @default(false)
+  hasPillar2             Boolean      @default(false)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 
   obligations Obligation[]
+  auditEvents AuditEvent[]
 }
 
 model ObligationRule {
@@ -73,4 +77,26 @@ model Obligation {
   notes     String?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+
+  auditEvents AuditEvent[]
+}
+
+model AuditEvent {
+  id             String        @id @default(cuid())
+  organisationId String
+  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  entityId       String?
+  entity         Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId   String?
+  obligation     Obligation?   @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  action         String
+  detail         String?
+  createdAt      DateTime      @default(now())
+
+  @@index([organisationId])
+  @@index([entityId])
+  @@index([userId])
+  @@index([createdAt])
 }

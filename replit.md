@@ -1,36 +1,58 @@
-# [Project name]
+# Quarterday
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Tax obligations register for in-house tax teams — tracks entities, generates obligations calendars, and maintains a full audit log.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/quarterday run dev` — start the Next.js app (port 25975, proxied to `/`)
+- `pnpm --filter @workspace/quarterday run db:generate` — regenerate Prisma client after schema changes
+- `pnpm --filter @workspace/quarterday run db:seed` — re-seed obligation rules + demo org/user (idempotent)
+- `pnpm --filter @workspace/quarterday run typecheck` — typecheck the app
 - Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Next.js 15 (App Router, Server Actions, server components)
+- PostgreSQL + Prisma ORM (migrations in `prisma/migrations/`)
+- TypeScript, plain CSS (no Tailwind)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/quarterday/prisma/schema.prisma` — canonical DB schema (source of truth)
+- `artifacts/quarterday/prisma/migrations/` — migration history; run `prisma migrate dev --name <name>` to add a migration
+- `artifacts/quarterday/prisma/seed.ts` — seeds obligation rules + demo org/user
+- `artifacts/quarterday/src/lib/obligations.ts` — obligation date-calculation engine
+- `artifacts/quarterday/src/lib/prisma.ts` — singleton Prisma client
+- `artifacts/quarterday/src/app/actions/entities.ts` — Server Actions (createEntity, saveObligations, deleteEntity)
 
-## Architecture decisions
+## Database models
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+| Model | Purpose |
+|---|---|
+| Organisation | Top-level tenant |
+| User | Member of an organisation (role: admin / member) |
+| Entity | UK company/entity being tracked |
+| ObligationRule | Seeded rule definitions (CT600, VAT, P11D, ERS, QIPs…) |
+| Obligation | Generated due-date instance tied to an entity + rule |
+| AuditEvent | Append-only log of actions (entityId, userId, action, detail) |
 
-## Product
+## Migrations
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Schema changes must go through `prisma migrate dev`:
+```bash
+# After editing schema.prisma:
+pnpm --filter @workspace/quarterday run db:generate
+# Creates and applies a new migration:
+cd artifacts/quarterday && pnpm exec prisma migrate dev --name <descriptive_name>
+```
+
+Never use `db push` on this project — migrations are the source of truth.
+
+## Seed data
+
+- **Org:** Acme Tax Ltd (id: `demo-org`)
+- **User:** Alex Smith — alex@acmetax.co.uk — role: admin
+- **Rules:** 10 obligation rules (CT600, CT payment, QIP 1–4, VAT quarterly, P11D, P11D(b), ERS)
 
 ## User preferences
 
@@ -38,8 +60,6 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- `prisma migrate dev` needs shadow-database access; works on Replit's PostgreSQL (CREATE DATABASE privileges are available).
+- Always run `db:generate` after schema changes before typechecking.
+- The app runs on port 25975 (set by `PORT` env var from `artifact.toml`).

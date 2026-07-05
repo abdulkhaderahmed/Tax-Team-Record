@@ -77,7 +77,6 @@ const rules = [
 
 async function main() {
   console.log("Seeding obligation rules...");
-
   for (const rule of rules) {
     await prisma.obligationRule.upsert({
       where: { ruleKey: rule.ruleKey },
@@ -85,16 +84,28 @@ async function main() {
       create: rule,
     });
   }
-
-  const orgCount = await prisma.organisation.count();
-  if (orgCount === 0) {
-    await prisma.organisation.create({
-      data: { name: "My Organisation" },
-    });
-    console.log("Created default organisation");
-  }
-
   console.log(`Seeded ${rules.length} obligation rules`);
+
+  console.log("Seeding demo organisation and user...");
+  const org = await prisma.organisation.upsert({
+    where: { id: "demo-org" },
+    update: { name: "Acme Tax Ltd" },
+    create: { id: "demo-org", name: "Acme Tax Ltd" },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "alex@acmetax.co.uk" },
+    update: { name: "Alex Smith", role: "admin", organisationId: org.id },
+    create: {
+      name: "Alex Smith",
+      email: "alex@acmetax.co.uk",
+      role: "admin",
+      organisationId: org.id,
+    },
+  });
+
+  console.log(`Demo org: ${org.name}`);
+  console.log("Demo user: alex@acmetax.co.uk (admin)");
 }
 
 main()
