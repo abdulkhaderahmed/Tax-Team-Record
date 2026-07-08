@@ -443,3 +443,14 @@ textarea { min-height: 72px; resize: vertical; }
 }
 .form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
 select.form-input { cursor: pointer; }
+
+/* ── Sign-in / sign-up shell ─────────────────────────────── */
+.sign-in-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  padding: 24px;
+}
+

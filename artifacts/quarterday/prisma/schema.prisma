@@ -10,6 +10,7 @@ datasource db {
 model Organisation {
   id        String   @id @default(cuid())
   name      String
+  clerkOrgId String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -34,6 +35,7 @@ model User {
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   name           String
   email          String       @unique
+  clerkUserId    String?      @unique
   role           String       @default("member")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
