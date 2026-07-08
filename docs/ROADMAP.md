@@ -43,11 +43,11 @@ Goal: obligations-as-code, versioned and diff-able.
 
 | # | Action | Owner | Blocked by |
 |---|---|---|---|
-| 1 | Push this docs tree to GitHub main | Abdul or Devin | No GitHub HTTPS token in this env |
-| 2 | Execute SPEC-001 (auth) | Devin | #1, plus Clerk secrets not yet in env |
-| 3 | Execute SPEC-002 (storage) | Devin | #1 |
-| 4 | Execute SPEC-003 (review queue) | Devin | #1 |
-| 5 | Apply design system to app shell (`design/DESIGN_SYSTEM.md` + `dashboard-mockup.html` as reference) | Devin | #1 |
+| 1 | ~~Push this docs tree to GitHub main~~ | Abdul / Devin | **Done** — `origin/main` @ `4ddae03` |
+| 2 | Execute SPEC-001 (auth + org scoping) | Devin | Clerk secrets not yet in env |
+| 3 | Execute SPEC-002 (storage) | Devin | #2 |
+| 4 | Execute SPEC-003 (review queue) | Devin | #2 |
+| 5 | Apply design system to app shell (`design/DESIGN_SYSTEM.md` + `dashboard-mockup.html` as reference) | Devin | #2 |
 | 6 | Legal read on AGPL-3.0 + LICENSE-ADDITIONAL.md of openaccountants before any content integration | Abdul | — |
 | 7 | Decide working name (Quarterday vs Tax Team Record) before design lands in-app | Abdul | — |
 

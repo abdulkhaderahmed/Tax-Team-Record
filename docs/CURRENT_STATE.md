@@ -47,7 +47,8 @@ Next.js 15 (App Router, server actions) · TypeScript strict · plain CSS (`glob
 
 ## In flight
 
-- docs/ tree committed locally (`db6ce30`) but **not pushed** to GitHub. Blocker: this environment has no GitHub HTTPS token/credentials configured, so `git push origin main` fails with "Invalid username or token". Need a PAT or SSH key to proceed. Other local work (e.g. SPEC-001) should wait until the source-of-truth push is resolved, or be done knowing it cannot yet be synced.
+- docs/ tree **pushed** to GitHub (`origin/main` now at `4ddae03`). Remote had two extra commits from a Devin branch adding `docs/taxgpt-uk/` analysis files; merged cleanly.
+- Next: execute `specs/SPEC-001-authentication.md` (auth + org scoping). Requires Clerk secrets (`CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`) to be added to the environment before runtime, but the code scaffolding can proceed.
 
 ## Strategy pack (local folder, not in repo)
 
