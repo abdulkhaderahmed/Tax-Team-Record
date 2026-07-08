@@ -43,8 +43,8 @@ Goal: obligations-as-code, versioned and diff-able.
 
 | # | Action | Owner | Blocked by |
 |---|---|---|---|
-| 1 | Push this docs tree to GitHub main | Abdul (5 min) or Devin | — |
-| 2 | Execute SPEC-001 (auth) | Devin | #1 |
+| 1 | Push this docs tree to GitHub main | Abdul or Devin | No GitHub HTTPS token in this env |
+| 2 | Execute SPEC-001 (auth) | Devin | #1, plus Clerk secrets not yet in env |
 | 3 | Execute SPEC-002 (storage) | Devin | #1 |
 | 4 | Execute SPEC-003 (review queue) | Devin | #1 |
 | 5 | Apply design system to app shell (`design/DESIGN_SYSTEM.md` + `dashboard-mockup.html` as reference) | Devin | #1 |

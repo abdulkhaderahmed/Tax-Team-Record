@@ -45,6 +45,10 @@ Next.js 15 (App Router, server actions) · TypeScript strict · plain CSS (`glob
 - No GitHub connector in the Cowork session; pushes go via user or Devin (see `../PUSH_INSTRUCTIONS.md`).
 - Devin (Ultra/max plan) available for autonomous implementation.
 
+## In flight
+
+- docs/ tree committed locally (`db6ce30`) but **not pushed** to GitHub. Blocker: this environment has no GitHub HTTPS token/credentials configured, so `git push origin main` fails with "Invalid username or token". Need a PAT or SSH key to proceed. Other local work (e.g. SPEC-001) should wait until the source-of-truth push is resolved, or be done knowing it cannot yet be synced.
+
 ## Strategy pack (local folder, not in repo)
 
 `Platform Strategy Pack/` 01–08: corpus analysis of 5 Grant Thornton deliverables (evidence base), TAM (~2k core ICP groups), competitive landscape (ONESOURCE, Alphatax/Tax Systems, Materia), MVP spec, systems architecture, pitch deck, implementation-adjusted build plan, Replit execution checklist. The implementation-adjusted plan (doc 07) is the operative product boundary: **system of record first; AI never writes directly to registers.**
