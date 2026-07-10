@@ -1,4 +1,4 @@
-# Quarterday / Tax-Team-Record — docs
+# Tax-Able / Tax-Team-Record — docs
 
 Single source of truth for product state, plans, and handoffs. Written 2026-07-08 by Claude (Cowork session); designed so any agent — Devin, Claude, Replit, or a human — can resume work cold.
 
@@ -21,5 +21,5 @@ Single source of truth for product state, plans, and handoffs. Written 2026-07-0
 
 1. **GitHub is the source of truth.** Session tools (Replit, Cowork, Notion, Asana) are ephemeral; anything worth keeping lands in this tree.
 2. **Every code file ships with an explainer** (`<name>.explainer.md`) per `EXPLAINER_STANDARD.md`, including a counterfactual analysis of the methodology chosen.
-3. **The register is the product.** AI drafts; humans confirm; nothing enters a register unreviewed (see `../artifacts/quarterday` app code).
+3. **The register is the product.** AI drafts; humans confirm; nothing enters a register unreviewed (see `../artifacts/tax-able` app code).
 4. **Anticipate halting.** Every working session ends by updating `CURRENT_STATE.md` and the "Next actions" block in `ROADMAP.md`.

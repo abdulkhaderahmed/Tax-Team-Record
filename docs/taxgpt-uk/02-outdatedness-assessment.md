@@ -80,7 +80,7 @@ choices that were *already* conservative when made. Verdict up front:
 |---|---|---|
 | Statute-section-as-atomic-unit data model | Keep | Rebuild on legislation.gov.uk CLML XML (doc 03 §2) |
 | Grounded synthetic gen + citation validation | Keep | Same recipe, UK citation grammar |
-| Hard-negative + on-policy DPO | Keep | Feed from Quarterday's human review queue (doc 04) |
+| Hard-negative + on-policy DPO | Keep | Feed from Tax-Able's human review queue (doc 04) |
 | GRPO w/ verifiable rewards | Keep, harden | Add LLM-judge layer; abstention-aware rewards |
 | Knowledge-in-weights strategy | Replace | RAG over versioned statute DB; fine-tune for citation/schema behavior only |
 | Qwen 2.5 3B + 2K context | Replace | Qwen3-class 4–8B, ≥32K context |

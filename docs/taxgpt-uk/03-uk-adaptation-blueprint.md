@@ -1,8 +1,8 @@
 # Reproducing TaxGPT for UK Tax Law — Step-by-Step Blueprint
 
 Goal: rebuild the TaxGPT pipeline (doc 01) for UK tax, correcting the dated parts (doc 02), in a
-shape that feeds Quarterday (doc 04). Working name: **quarterday-model** — the empty
-`abdulkhaderahmed/quarterday` repo is the natural home for this pipeline (see doc 04 §5).
+shape that feeds Tax-Able (doc 04). Working name: **tax-able-model** — the empty
+`abdulkhaderahmed/tax-able` repo is the natural home for this pipeline (see doc 04 §5).
 
 ---
 
@@ -25,7 +25,7 @@ interpretive manuals. This changes the data model in two ways:
 **Primary statutes** — legislation.gov.uk publishes CLML (Crown Legislation Markup Language) XML
 under the Open Government Licence. Each act is fetchable as XML, e.g.
 `https://www.legislation.gov.uk/ukpga/2010/4/data.xml` (CTA 2010); section-level and
-point-in-time URLs are also supported. Start with the acts Quarterday's seeded obligation rules
+point-in-time URLs are also supported. Start with the acts Tax-Able's seeded obligation rules
 already imply (CT600, CT payment/QIPs, VAT, P11D/P11D(b), ERS):
 
 | Act | Covers | Priority |
@@ -48,7 +48,7 @@ version_date, uri}` → `data/processed/uk_sections.jsonl`. CLML is more complex
 **Secondary interpretive corpus** — HMRC internal manuals (CTM, EM, VATREG, EIM, ERSM, CA, CIRD…)
 are on GOV.UK under OGL and fetchable via the GOV.UK Content API
 (`https://www.gov.uk/api/content/hmrc-internal-manuals/<manual>/<page>`). These are the UK analog of
-the 26 CFR stage and are *more* practitioner-relevant than the statutes for many Quarterday
+the 26 CFR stage and are *more* practitioner-relevant than the statutes for many Tax-Able
 workflows. Parse to `{manual, page_id, heading, text, url}`.
 
 **Reference data (the `inflation_adjusted_amounts.json` analog)** — build
@@ -56,14 +56,14 @@ workflows. Parse to `{manual, page_id, heading, text, url}`.
 employers" and the annual Finance Act: CT main/small-profits rates and marginal relief limits,
 VAT registration/deregistration thresholds, AIA/full-expensing limits, personal allowance and bands,
 NIC classes, official rate of interest, R&D (merged scheme) rates, ATED bands, etc. Keyed by tax
-year, with statutory source per figure. **This file is also directly useful to Quarterday's
+year, with statutory source per figure. **This file is also directly useful to Tax-Able's
 deterministic calendar engine, independent of any ML.**
 
 **Citation grammar (the `citation_utils.py` analog)** — UK citations are messier than `§`:
 `s 455 CTA 2010`, `section 1046 CTA 2009`, `Sch 36 FA 2008 para 1`, `reg 69 SI 2003/2682`,
 `VATA 1994 s 4(1)`. Write `uk_citation_utils.py` with one canonical regex + normalizer
 (act-name aliases → canonical act IDs), shared by generator, reward, evaluator, and — later —
-Quarterday's `statutoryBasis` validator. This single module is the highest-leverage artifact of the
+Tax-Able's `statutoryBasis` validator. This single module is the highest-leverage artifact of the
 whole build.
 
 ## 3. Step 2 — Retrieval layer FIRST (correcting TaxGPT's biggest mistake)
@@ -72,7 +72,7 @@ Before any fine-tuning, index the corpus for RAG:
 
 1. Chunk sections/manual pages (~1–2K tokens, keep `(act, section)` metadata + version dates).
 2. Embed with an open model (e.g. `bge-m3` or `all-MiniLM` class) into **pgvector in the same
-   Postgres Quarterday already runs** — no new infra.
+   Postgres Tax-Able already runs** — no new infra.
 3. Hybrid retrieval: BM25 (Postgres full-text) + dense, fused (RRF), exactly the TaxSphere pattern.
 4. Answer template: *retrieve → answer only from provided sections → cite `(act, section)` →
    abstain if not found*.
@@ -94,7 +94,7 @@ Mirror `generate_grounded_data.py` with the same seven safeguards from doc 01 §
   caveated with tax year.
 - **Hard-negative DPO:** subtly wrong versions (wrong deadline, wrong act, right section wrong
   subsection, prior-year threshold), with `metadata.error_introduced`.
-- **Importance tiers:** Tier 1 = what Quarterday users touch (CT600 filing s 55 FA 1998 Sch 18,
+- **Importance tiers:** Tier 1 = what Tax-Able users touch (CT600 filing s 55 FA 1998 Sch 18,
   QIPs SI 1998/3175, VAT registration VATA 1994 Sch 1, P11D ITEPA 2003 ss 63–96 + reg 85 SI
   2003/2682, ERS annual returns ITEPA 2003 Pt 7 s 421J(3), s 455 CTA 2010, R&D CTA 2009 Pt 13,
   capital allowances CAA 2001). Upsample these.
@@ -128,7 +128,7 @@ Build a UK benchmark *before* training, and gate every model version on it:
 1. **Citation set (~200 Q):** "Which provision governs X?" — auto-scorable with the citation utils.
 2. **Figures set (~100 Q):** deadlines, rates, thresholds by tax year — auto-scorable against
    `uk_rates_thresholds.json`.
-3. **Scenario set (~50 Q):** Quarterday-shaped cases ("large company, first period over threshold —
+3. **Scenario set (~50 Q):** Tax-Able-shaped cases ("large company, first period over threshold —
    QIP dates?") — scored statement-level with partial credit, LLM-judge + spot human review.
    ⚠️ Do not scrape CIOT/ATT exam papers wholesale — they are copyrighted; write your own items
    *modelled on* their format, or use HMRC manual worked examples (OGL).
@@ -139,7 +139,7 @@ Build a UK benchmark *before* training, and gate every model version on it:
 
 - **Local/private:** fuse → GGUF Q4_K_M → Ollama (reuse `export_to_ollama.py`; watch the
   chat-template mismatch documented in `ollama-vs-mlx-debug-2026-03-31.md`).
-- **In-app (Quarterday):** the extraction path stays on structured-output APIs for now (doc 04),
+- **In-app (Tax-Able):** the extraction path stays on structured-output APIs for now (doc 04),
   with the fine-tuned open model as an optional privacy-tier provider behind the same interface.
 
 ## 8. Sequenced plan with exit criteria
@@ -151,7 +151,7 @@ Build a UK benchmark *before* training, and gate every model version on it:
 | 2 (wk 3–4) | Grounded SFT/DPO data gen + manifests + eval benchmark v1 | ≥10K validated pairs, 0 citation-leak failures; benchmark frozen |
 | 3 (wk 5–6) | SFT → DPO; eval; iterate | Beats base model on citation set by ≥20 pts, no regression on abstention |
 | 4 (wk 7+) | GRPO with hardened rewards; on-policy DPO from logged failures | Beats DPO checkpoint on figures set; no reward-hacking found by judge audit |
-| 5 | GGUF/Ollama export + Quarterday provider integration (doc 04) | Same extraction eval pass-rate as GPT-4o on the review-queue benchmark |
+| 5 | GGUF/Ollama export + Tax-Able provider integration (doc 04) | Same extraction eval pass-rate as GPT-4o on the review-queue benchmark |
 
-Phases 0–1 deliver standalone value to Quarterday (validated citations, rates data, retrieval for
+Phases 0–1 deliver standalone value to Tax-Able (validated citations, rates data, retrieval for
 reviewers) even if you never train a model. Do them first regardless.

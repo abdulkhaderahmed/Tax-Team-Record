@@ -16,7 +16,7 @@ What it is, verified by inspection:
 - Verification model: named, credentialed accountants review complete guides on the public record (10/193 jurisdictions reviewed so far; UK currently `verified_by: pending`).
 - Access surfaces: self-hosted MCP server (PyPI `openaccountants-mcp`, 6 read-only tools reading the open repo) and a **hosted MCP** (`openaccountants.com/api/mcp`) adding `get_rates`, `list_verifiers`, `compare_jurisdictions`, and `request_accountant_review` (routes a working paper to a named professional). Also ships a Claude plugin marketplace manifest.
 
-### Fit against Quarterday
+### Fit against Tax-Able
 | Need | Fit |
 |---|---|
 | Check extracted figures/deadlines against current cited reference | Strong — that is literally the guide format |

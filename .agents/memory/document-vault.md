@@ -1,10 +1,10 @@
 ---
 name: Document Vault build notes
-description: Key decisions and quirks from building the Document Vault feature on Quarterday.
+description: Key decisions and quirks from building the Document Vault feature on Tax-Able.
 ---
 
 ## Key decisions
-- File storage: local filesystem at `process.cwd()/uploads/` (created at runtime via `mkdir({ recursive: true })`). `process.cwd()` in Next.js dev is the artifact directory (`artifacts/quarterday/`).
+- File storage: local filesystem at `process.cwd()/uploads/` (created at runtime via `mkdir({ recursive: true })`). `process.cwd()` in Next.js dev is the artifact directory (`artifacts/tax-able/`).
 - Storage key: `randomUUID().ext` (built-in Node.js crypto, no extra dep).
 - Text extraction: one chunk per file (not per page); full text stored in `DocumentChunk`.
 - Health flags: regex scan with 6 patterns (XX, TBC, [insert …], <<…>>, do/do not, wrong); each occurrence stored separately with 80-char context snippet.

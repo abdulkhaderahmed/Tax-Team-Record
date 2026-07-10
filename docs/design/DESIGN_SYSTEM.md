@@ -1,6 +1,6 @@
-# Quarterday design system v1 — "calm professional"
+# Tax-Able design system v1 — "calm professional"
 
-Decision basis: D-007 (ships as tokens + HTML reference, not Figma), D-008 (calm professional SaaS). Reference implementation: `dashboard-mockup.html` (open in a browser). Consumers: Devin/Replit applying this to `artifacts/quarterday/app/globals.css`.
+Decision basis: D-007 (ships as tokens + HTML reference, not Figma), D-008 (calm professional SaaS). Reference implementation: `dashboard-mockup.html` (open in a browser). Consumers: Devin/Replit applying this to `artifacts/tax-able/app/globals.css`.
 
 ## Principles
 1. **Chrome is monochrome; colour means state.** The interface is warm greys and ink. Saturated colour appears only as semantic status (overdue/due-soon/on-track/in-review) — so colour is information, never decoration. A compliance product must make red mean something.
@@ -24,7 +24,7 @@ Decision basis: D-007 (ships as tokens + HTML reference, not Figma), D-008 (calm
   --ink-tertiary: #8A8D93;  /* meta, timestamps */
 
   /* brand */
-  --brand: #0F5D5A;         /* Quarterday teal — links, primary buttons, active nav */
+  --brand: #0F5D5A;         /* Tax-Able teal — links, primary buttons, active nav */
   --brand-hover: #0B4E4B;
   --brand-tint: #E7F1F0;    /* selected states, focus tints */
 

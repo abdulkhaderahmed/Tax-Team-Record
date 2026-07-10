@@ -175,4 +175,4 @@ gov XML (IRC + CFR)
 **The durable insight:** treat the *statute section* as the atomic unit — parse it, generate from it,
 validate citations against it, reward citations to it, and evaluate citations of it. Everything else
 (model choice, MLX, quantization) is swappable plumbing. Doc 02 assesses which parts have aged;
-doc 03 rebuilds this for UK law; doc 04 wires it into Quarterday.
+doc 03 rebuilds this for UK law; doc 04 wires it into Tax-Able.

@@ -1,7 +1,7 @@
 # design/dashboard-mockup.html — explainer
 
 ## Purpose
-Single-file, dependency-free reference implementation of the v1 design system applied to the app's most important screen. It is the visual contract for Devin/Replit when restyling `artifacts/quarterday` — open it in any browser next to the live app.
+Single-file, dependency-free reference implementation of the v1 design system applied to the app's most important screen. It is the visual contract for Devin/Replit when restyling `artifacts/tax-able` — open it in any browser next to the live app.
 
 ## Architecture
 Pure HTML+CSS (no JS, no CDN fonts — system fallback stands in for Inter here; the app itself loads Inter via `next/font`). Tokens are copied verbatim from `DESIGN_SYSTEM.md` so drift between spec and reference is impossible at creation time. Layout: CSS grid shell (232px sidebar + main), KPI grid, 2-column content (deadlines table + review/audit stack). Demo data is deliberately *real-shaped*: P11D/ERS due 6 July 2026 render as genuinely overdue relative to the authoring date (8 July 2026), QIP instalment on the 14th echoes the product name, and the review items reprise real corpus defects (£85k vs £90k threshold, EMI disqualifying-event tripwire).

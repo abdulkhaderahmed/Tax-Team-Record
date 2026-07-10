@@ -1,5 +1,5 @@
 ---
-name: Quarterday project file layout
+name: Tax-Able project file layout
 description: Which src/ files are active Next.js code vs. deleted Vite scaffold
 ---
 

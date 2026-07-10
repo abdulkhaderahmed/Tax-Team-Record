@@ -49,7 +49,7 @@ Goal: obligations-as-code, versioned and diff-able.
 | 4 | Execute SPEC-003 (review queue) | Devin | #2 |
 | 5 | Apply design system to app shell (`design/DESIGN_SYSTEM.md` + `dashboard-mockup.html` as reference) | Devin | #2 |
 | 6 | Legal read on AGPL-3.0 + LICENSE-ADDITIONAL.md of openaccountants before any content integration | Abdul | — |
-| 7 | Decide working name (Quarterday vs Tax Team Record) before design lands in-app | Abdul | — |
+| 7 | ~~Decide working name before design lands in-app~~ | Abdul | **Done** — name is **Tax-Able** (app package `@workspace/tax-able`, dir `artifacts/tax-able`) |
 
 ## Halt/resume protocol
 

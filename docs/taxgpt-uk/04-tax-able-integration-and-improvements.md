@@ -1,21 +1,21 @@
-# Applying TaxGPT to Tax-Team-Record / Quarterday — Integration & Improvement Plan
+# Applying TaxGPT to Tax-Team-Record / Tax-Able — Integration & Improvement Plan
 
-Context: this monorepo's `artifacts/quarterday` is a multi-tenant UK tax obligations register:
+Context: this monorepo's `artifacts/tax-able` is a multi-tenant UK tax obligations register:
 GPT-4o strict-structured extraction (`src/lib/ai-extraction.ts`) → `ExtractionRun` → `ReviewItem`
 human review queue → promotion to live objects (Obligation/Action/Assumption/Tripwire…), with
 RACI, 9-dimension status, source reconciliation, and audit events. The standalone
-`abdulkhaderahmed/quarterday` repo is currently **empty**.
+`abdulkhaderahmed/tax-able` repo is currently **empty**.
 
-Key realization: **Quarterday already has the one thing TaxGPT lacked — a human-in-the-loop review
+Key realization: **Tax-Able already has the one thing TaxGPT lacked — a human-in-the-loop review
 queue generating labeled corrections in production.** TaxGPT had to synthesize its preference data;
-Quarterday mints it every time a reviewer edits or rejects a draft. The plan below is mostly about
+Tax-Able mints it every time a reviewer edits or rejects a draft. The plan below is mostly about
 harvesting that asset, plus porting TaxGPT's validation/eval discipline into the app.
 
 ---
 
 ## 1. What maps to what
 
-| TaxGPT concept | Quarterday counterpart today | Gap |
+| TaxGPT concept | Tax-Able counterpart today | Gap |
 |---|---|---|
 | Grounded generation w/ citation validation | Extraction prompt demands verbatim `sourceText` | `sourceText` is never verified against the document |
 | `citation_utils.py` canonical regex | `statutoryBasis` free-text field on obligations | No validation, no canonical act/section form |
@@ -26,7 +26,7 @@ harvesting that asset, plus porting TaxGPT's validation/eval discipline into the
 | Frontier-review loop (`gpt54-training-review*.md`) | — | Adopt as practice for schema/prompt changes |
 | Ollama local serving | Hard dependency on OpenAI (`openai-client.ts`) | No provider abstraction, no privacy tier |
 
-## 2. Improvements to Quarterday (ranked, concrete)
+## 2. Improvements to Tax-Able (ranked, concrete)
 
 ### 2.1 Harvest the review queue as training data — the flywheel (highest value)
 Add an exporter (script or admin endpoint) that emits, per reviewed `ReviewItem`:
@@ -117,21 +117,21 @@ before shipping. Cheap insurance; fits the existing `promptVersion` discipline.
 ## 4. What NOT to do
 
 - **Don't fine-tune first.** TaxGPT's arc proves the order: grounding, validation, and evals gave
-  the gains; training amplified them. Quarterday phases 2.2/2.3/2.6/2.7 come before any GPU spend.
+  the gains; training amplified them. Tax-Able phases 2.2/2.3/2.6/2.7 come before any GPU spend.
 - **Don't let a model compute liabilities.** The system prompt's "no calculations" rule is right and
   matches 2026 practice (deterministic engines + LLM intake). Keep tax math in typed TypeScript.
 - **Don't train on client documents without consent handling** — the flywheel (2.1) needs a data
   governance note per organisation before it ships.
 
-## 5. Proposed home for the model pipeline: the empty `quarterday` repo
+## 5. Proposed home for the model pipeline: the empty `tax-able` repo
 
-Keep the app monorepo clean; put the doc-03 pipeline in `abdulkhaderahmed/quarterday`:
+Keep the app monorepo clean; put the doc-03 pipeline in `abdulkhaderahmed/tax-able`:
 
 ```
-quarterday/
+tax-able/
 ├── data/{raw,processed,reference,train,eval}/   # CLML XML → sections → grounded splits (+ MANIFEST.md per version)
 ├── scripts/parse_clml.py, uk_citation_utils.py, generate_grounded_data.py,
-│           export_review_queue.py               # ← consumes Quarterday DB export (2.1)
+│           export_review_queue.py               # ← consumes Tax-Able DB export (2.1)
 ├── configs/{sft,dpo,grpo}_config.yaml           # start from TaxGPT's, adjusted per doc 03 §5
 ├── eval/uk_benchmark/                           # doc 03 §6
 └── docs/                                        # investigations, review rounds
@@ -147,7 +147,7 @@ quarterday/
 | 4 | Review-queue exporter + `draftPayload` (2.1) | — | days |
 | 5 | pgvector RAG for reviewers + prompt enrichment (2.6) | 1 | ~1 wk |
 | 6 | Provider abstraction (2.5) | — | days |
-| 7 | Grounded data gen + SFT/DPO in `quarterday` repo (doc 03 phases 2–3) | 1,3,4 | wks |
+| 7 | Grounded data gen + SFT/DPO in `tax-able` repo (doc 03 phases 2–3) | 1,3,4 | wks |
 | 8 | GRPO + local privacy tier (doc 03 phases 4–5) | 7 | wks |
 
 Items 1–6 improve the product immediately with zero ML risk; 7–8 are the TaxGPT-style build,

@@ -4,7 +4,7 @@ Source: live inspection of the Replit app ("Tax Team Record", repl `b1049bd0`), 
 
 ## What the product is
 
-**Quarterday** (working name): system of record for in-house UK tax teams. Turns adviser deliverables into reviewed registers → registers into a statutory calendar → everything source-linked and auditable. Buyer: Head of Tax / CFO, UK corporates and UK branches of foreign groups. Core ICP: HMRC Large Business Directorate population (~2,000 groups) plus QIP-payers (~8–10k groups).
+**Tax-Able** (working name): system of record for in-house UK tax teams. Turns adviser deliverables into reviewed registers → registers into a statutory calendar → everything source-linked and auditable. Buyer: Head of Tax / CFO, UK corporates and UK branches of foreign groups. Core ICP: HMRC Large Business Directorate population (~2,000 groups) plus QIP-payers (~8–10k groups).
 
 ## Built and working (deployed on Replit, `.replit.app`)
 
@@ -36,7 +36,7 @@ Next.js 15 (App Router, server actions) · TypeScript strict · plain CSS (`glob
 
 - `.next/` build cache is committed (hundreds of files; bloats every commit). Add to `.gitignore`.
 - `attached_assets/Pasted-*` — 5 raw feature-spec pastes committed at root; superseded by this docs tree.
-- Repo layout: app lives under `artifacts/quarterday/`, plus `artifacts/api-server/`, `artifacts/mockup-sandbox/`, `lib/`, `scripts/`. Consider flattening later; not urgent.
+- Repo layout: app lives under `artifacts/tax-able/`, plus `artifacts/api-server/`, `artifacts/mockup-sandbox/`, `lib/`, `scripts/`. Consider flattening later; not urgent.
 
 ## Environment facts that constrain planning
 
@@ -45,10 +45,15 @@ Next.js 15 (App Router, server actions) · TypeScript strict · plain CSS (`glob
 - No GitHub connector in the Cowork session; pushes go via user or Devin (see `../PUSH_INSTRUCTIONS.md`).
 - Devin (Ultra/max plan) available for autonomous implementation.
 
-## In flight
+## In flight (session 2026-07-09)
 
-- docs/ tree **pushed** to GitHub (`origin/main` now at `4ddae03`). Remote had two extra commits from a Devin branch adding `docs/taxgpt-uk/` analysis files; merged cleanly.
-- Next: execute `specs/SPEC-001-authentication.md` (auth + org scoping). Requires Clerk secrets (`CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`) to be added to the environment before runtime, but the code scaffolding can proceed.
+Working directly in `artifacts/tax-able/` (app dir + package renamed from `quarterday`; see DECISIONS D-010). All changes below pass `tsc --noEmit`. Not yet committed/pushed.
+
+- **SPEC-001 (auth + org scoping): implemented.** Clerk deps, `src/middleware.ts`, sign-in/up routes, `ClerkProvider`, `src/lib/auth.ts` (`requireOrg`/`requireAdmin`). All hardcoded `ORG_ID`/`USER_ID` replaced with `requireOrg()`. Schema gained `Organisation.clerkOrgId` + `User.clerkUserId`; migration `20260709180500_add_clerk_org_user_ids` applied to the live Neon DB (via `db execute` + manual `_prisma_migrations` insert — Neon advisory-lock timeout blocks `migrate deploy`/`dev`). Runtime still needs real Clerk secrets (currently keyless mode).
+- **SPEC-002 (durable storage): core implemented.** `src/lib/storage.ts` driver (`putObject`/`getObjectStream`/`deleteObject`/`objectKey`) with Replit Object Storage + filesystem fallback (`STORAGE_DRIVER`). Upload streams to storage then commits DB (compensating delete on failure); download route is org-checked and streams from driver. Key scheme `orgs/{orgId}/documents/{docId}/{file}`. Backfill script `scripts/backfill-local-documents.ts`. Published-deploy download test still pending.
+- **SPEC-003 (review queue + background extraction): core implemented.** New `/review` global queue, nav badge + dashboard counts, `startExtraction` now queues (`Pending`) and runs `processExtractionRun` in-process (idempotent). Known v1 limit: no startup sweep for runs left `Running` after a crash.
+- **Design system: applied.** Inter via `next/font`; `globals.css` fully tokenised (no hex outside `:root`); shell restructured to sidebar-with-mark + active `NavLink`; removed double-`AppShell` wrapping on document/source pages. Explainers added under `docs/explainers/`.
+- Next: add Clerk secrets + claim keys, then run the SPEC exit-criteria tests (cross-org isolation, published upload/download, 30-page async extraction); commit app + docs; push to `origin main`.
 
 ## Strategy pack (local folder, not in repo)
 

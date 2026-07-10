@@ -13,8 +13,8 @@ The one Asana project ("B2B ideas and executions", 5 generic GTM seed tasks, 0 c
 **Counterfactual:** adopting Asana was rejected because a second tracker creates sync debt with zero coordination benefit at n=1 humans. Reverses at Phase 4 (GTM experiments with external collaborators) or first hire.
 
 ## D-003 · 2026-07-08 · Bloomberg Tax article: adopt as trust checklist, not as guide
-Its value is the enterprise trust bar: source citations, reviewer sign-offs, audit trails, workflow documentation, verified primary-source grounding. Quarterday's review-queue architecture already embodies this; Phase 2 makes it visible per-item. Its US calc domains (ASC 740, GILTI/NCTI, BEAT, CAMT) are out of scope for a UK obligations product.
-**Counterfactual:** treating it as a feature roadmap was rejected — Bloomberg sells calculation engines; Quarterday sells the system of record around judgment. Reverses only if the product pivots into computation (e.g., a QIP calculator), where "verified calculation" framing becomes literal.
+Its value is the enterprise trust bar: source citations, reviewer sign-offs, audit trails, workflow documentation, verified primary-source grounding. Tax-Able's review-queue architecture already embodies this; Phase 2 makes it visible per-item. Its US calc domains (ASC 740, GILTI/NCTI, BEAT, CAMT) are out of scope for a UK obligations product.
+**Counterfactual:** treating it as a feature roadmap was rejected — Bloomberg sells calculation engines; Tax-Able sells the system of record around judgment. Reverses only if the product pivots into computation (e.g., a QIP calculator), where "verified calculation" framing becomes literal.
 
 ## D-004 · 2026-07-08 · whatwouldclaudeuse.com: adopt specific picks, not the whole stack
 Adopted for the gaps the app actually has: **Clerk** (auth, SPEC-001), **Sentry** (errors), **PostHog** (analytics), **Resend** (transactional email, when notifications land), **GitHub Actions** (CI). Not adopted: Vercel/Neon migration (app is committed to Replit hosting + managed Postgres for now — migration cost > benefit pre-users), Tailwind retrofit (plain CSS already shipped; design tokens deliver the benefit without a rewrite, see design/DESIGN_SYSTEM.md).
@@ -38,3 +38,7 @@ Stripe/Mercury register: restrained near-monochrome chrome, semantic colour rese
 ## D-009 · 2026-07-08 · gpt-4o stays for extraction, pending benchmark
 Already wired and Zod-validated. Swapping now is churn without measurement.
 **Counterfactual:** immediate swap to Claude was rejected absent data. Reverses when the Haiku/Sonnet benchmark on the 5-document GT corpus (MODEL_ROUTING rule 4) shows ≥ parity accuracy at lower cost — likely, and worth running before pilot volume.
+
+## D-010 · 2026-07-09 · Working name is Tax-Able (resolves ROADMAP #7)
+The product/app working name is **Tax-Able**. Applied across the codebase: app package renamed `@workspace/quarterday` → `@workspace/tax-able`, directory `artifacts/quarterday` → `artifacts/tax-able`, infra config (`.replit`, `.replit-artifact/artifact.toml`, `.claude/launch.json`), UI copy, and docs. Verbatim historical prompt transcripts under `docs/history/` are left unchanged as records of what was actually written.
+**Counterfactual:** keeping "Quarterday" was rejected now that the name decision is made and design work is about to land in-app (renaming later would churn more surface). Reverses only if a trademark/availability check forces a different name — at which point the same swap runs again.

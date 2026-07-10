@@ -3,7 +3,7 @@
 You (Devin) are the implementation tier for this repo. A strategy-tier agent maintains the docs; you turn specs into merged code. Read `CURRENT_STATE.md` first, then this.
 
 ## Repo orientation
-- App: `artifacts/quarterday/` — Next.js 15 App Router, TS strict, Prisma 5 + Postgres, plain CSS in `globals.css`, OpenAI SDK for extraction, no auth yet.
+- App: `artifacts/tax-able/` — Next.js 15 App Router, TS strict, Prisma 5 + Postgres, plain CSS in `globals.css`, OpenAI SDK for extraction, no auth yet.
 - Other roots (`artifacts/api-server/`, `artifacts/mockup-sandbox/`, `lib/`, `scripts/`) are secondary; don't refactor them opportunistically.
 - Deployment: Replit. The published container has an ephemeral, separate filesystem — this is why SPEC-002 exists.
 
@@ -22,7 +22,7 @@ You (Devin) are the implementation tier for this repo. A strategy-tier agent mai
 6. **Commit style:** conventional-ish prefixes — `feat:`, `fix:`, `docs:`, `chore:`. Keep app changes and docs-tree changes in separate commits where practical.
 
 ## Guardrails
-- Don't rotate the working name (Quarterday vs Tax Team Record) in code/UI until D-open item in ROADMAP (#7) is decided; use "Quarterday" in new UI copy.
+- Don't rotate the working name (Tax-Able vs Tax Team Record) in code/UI until D-open item in ROADMAP (#7) is decided; use "Tax-Able" in new UI copy.
 - Don't add Tailwind or a component library — design tokens + plain CSS (D-004, D-008).
 - Don't integrate openaccountants content until the AGPL gate clears (ROADMAP next-action #6). The MCP *protocol* prototype may proceed against their hosted server in a spike branch.
 - Secrets: `OPENAI_API_KEY` and DB URL live in Replit secrets. New secrets (Clerk keys, storage credentials) go there too; never commit them.

@@ -10,8 +10,8 @@ After running `prisma migrate dev` (or `prisma generate`), the Next.js dev serve
 
 **Why:** `src/lib/prisma.ts` uses the standard Next.js singleton pattern (`globalThis.prisma ?? new PrismaClient()`). The guard prevents reconnection churn but also locks in the client instance for the lifetime of the process.
 
-**How to apply:** After any `prisma migrate dev` or `prisma generate` that adds new models or relations, always restart the workflow (`artifacts/quarterday: web`) immediately. Do not expect hot-reload to pick up new Prisma model accessors — it won't.
+**How to apply:** After any `prisma migrate dev` or `prisma generate` that adds new models or relations, always restart the workflow (`artifacts/tax-able: web`) immediately. Do not expect hot-reload to pick up new Prisma model accessors — it won't.
 
 Fix sequence:
-1. `pnpm --filter @workspace/quarterday run db:generate` (or it runs automatically via `migrate dev`)
-2. Restart workflow: `artifacts/quarterday: web`
+1. `pnpm --filter @workspace/tax-able run db:generate` (or it runs automatically via `migrate dev`)
+2. Restart workflow: `artifacts/tax-able: web`

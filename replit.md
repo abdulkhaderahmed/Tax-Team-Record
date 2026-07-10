@@ -1,13 +1,13 @@
-# Quarterday
+# Tax-Able
 
 Tax obligations register for in-house tax teams — tracks entities, generates obligations calendars, and maintains a full audit log.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/quarterday run dev` — start the Next.js app (port 25975, proxied to `/`)
-- `pnpm --filter @workspace/quarterday run db:generate` — regenerate Prisma client after schema changes
-- `pnpm --filter @workspace/quarterday run db:seed` — re-seed obligation rules + demo org/user (idempotent)
-- `pnpm --filter @workspace/quarterday run typecheck` — typecheck the app
+- `pnpm --filter @workspace/tax-able run dev` — start the Next.js app (port 25975, proxied to `/`)
+- `pnpm --filter @workspace/tax-able run db:generate` — regenerate Prisma client after schema changes
+- `pnpm --filter @workspace/tax-able run db:seed` — re-seed obligation rules + demo org/user (idempotent)
+- `pnpm --filter @workspace/tax-able run typecheck` — typecheck the app
 - Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
@@ -18,12 +18,12 @@ Tax obligations register for in-house tax teams — tracks entities, generates o
 
 ## Where things live
 
-- `artifacts/quarterday/prisma/schema.prisma` — canonical DB schema (source of truth)
-- `artifacts/quarterday/prisma/migrations/` — migration history; run `prisma migrate dev --name <name>` to add a migration
-- `artifacts/quarterday/prisma/seed.ts` — seeds obligation rules + demo org/user
-- `artifacts/quarterday/src/lib/obligations.ts` — obligation date-calculation engine
-- `artifacts/quarterday/src/lib/prisma.ts` — singleton Prisma client
-- `artifacts/quarterday/src/app/actions/entities.ts` — Server Actions (createEntity, saveObligations, deleteEntity)
+- `artifacts/tax-able/prisma/schema.prisma` — canonical DB schema (source of truth)
+- `artifacts/tax-able/prisma/migrations/` — migration history; run `prisma migrate dev --name <name>` to add a migration
+- `artifacts/tax-able/prisma/seed.ts` — seeds obligation rules + demo org/user
+- `artifacts/tax-able/src/lib/obligations.ts` — obligation date-calculation engine
+- `artifacts/tax-able/src/lib/prisma.ts` — singleton Prisma client
+- `artifacts/tax-able/src/app/actions/entities.ts` — Server Actions (createEntity, saveObligations, deleteEntity)
 
 ## Database models
 
@@ -41,9 +41,9 @@ Tax obligations register for in-house tax teams — tracks entities, generates o
 Schema changes must go through `prisma migrate dev`:
 ```bash
 # After editing schema.prisma:
-pnpm --filter @workspace/quarterday run db:generate
+pnpm --filter @workspace/tax-able run db:generate
 # Creates and applies a new migration:
-cd artifacts/quarterday && pnpm exec prisma migrate dev --name <descriptive_name>
+cd artifacts/tax-able && pnpm exec prisma migrate dev --name <descriptive_name>
 ```
 
 Never use `db push` on this project — migrations are the source of truth.
