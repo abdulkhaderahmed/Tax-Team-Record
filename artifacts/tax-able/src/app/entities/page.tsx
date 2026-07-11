@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { fmtDate } from "@/lib/obligations";
+import { requireOrg } from "@/lib/auth";
 
 export default async function EntitiesPage() {
+  const { orgId } = await requireOrg();
   const entities = await prisma.entity.findMany({
+    where: { organisationId: orgId, deletedAt: null },
     orderBy: { legalName: "asc" },
     include: { _count: { select: { obligations: true } } },
   });

@@ -45,7 +45,7 @@ export default function NewSourceSystemPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div className="form-row">
                 <label className="form-label">Owner</label>
-                <input name="owner" className="form-input" placeholder="e.g. Alex Smith" />
+                <input name="owner" className="form-input" placeholder="e.g. Finance systems team" />
               </div>
               <div className="form-row">
                 <label className="form-label">Department</label>

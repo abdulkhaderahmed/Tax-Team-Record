@@ -1,6 +1,8 @@
 # SPEC-001 — Authentication and org scoping
 
-Status: ready · Owner: Devin · Blocks: everything user-facing · Decision basis: D-004 (Clerk)
+Status: implemented in `codex/advice-control-record`; production Clerk configuration and cross-organisation scenario tests remain unproven · Decision basis: D-004 (Clerk)
+
+This spec records the original problem and acceptance criteria. The current implementation has organisation-scoped RBAC, internal authenticated user IDs, document grants and a deliberately keyless local demo mode; see `../CURRENT_STATE.md` for the verified boundary.
 
 ## Problem
 The deployed app is public. `ORG_ID = "demo-org"` is hardcoded in every server action and page. No user identity exists, so audit events can't attribute actors — which breaks the product's core audit promise.

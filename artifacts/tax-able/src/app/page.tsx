@@ -2,32 +2,72 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { fmtDate } from "@/lib/obligations";
 import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
 
 const OPEN_REVIEW_STATUSES = ["Needs review", "In review", "Needs adviser input", "Needs source verification"];
 
 export default async function DashboardPage() {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
-  const [entityCount, obligationCount, openReviewCount, runningExtractionCount, upcoming, recentEntities] =
+  const context = await requireOrg();
+  const orgId = context.orgId;
+  const horizon = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+  const [
+    entityCount,
+    obligationCount,
+    openReviewCount,
+    runningExtractionCount,
+    blockingExceptionCount,
+    overdueRequestCount,
+    pendingApprovalCount,
+    upcoming,
+    recentEntities,
+  ] =
     await Promise.all([
-      prisma.entity.count({ where: { organisationId: orgId } }),
-      prisma.obligation.count(),
-      prisma.reviewItem.count({ where: { organisationId: orgId, reviewStatus: { in: OPEN_REVIEW_STATUSES } } }),
-      prisma.extractionRun.count({ where: { organisationId: orgId, status: { in: ["Pending", "Running"] } } }),
+      prisma.entity.count({ where: { organisationId: orgId, deletedAt: null } }),
+      prisma.obligation.count({
+        where: {
+          organisationId: orgId,
+          deletedAt: null,
+          archivedAt: null,
+          OR: [{ draftReviewStatus: null }, { draftReviewStatus: "activated" }],
+        },
+      }),
+      prisma.reviewItem.count({ where: { organisationId: orgId, document: documentAccessWhere(context, "view"), reviewStatus: { in: OPEN_REVIEW_STATUSES } } }),
+      prisma.extractionRun.count({ where: { organisationId: orgId, document: documentAccessWhere(context, "view"), status: { in: ["Pending", "Running"] } } }),
+      prisma.exception.count({
+        where: {
+          organisationId: orgId,
+          blocksFiling: true,
+          status: { in: ["Open", "In progress"] },
+        },
+      }),
+      prisma.dataRequest.count({
+        where: {
+          organisationId: orgId,
+          status: { in: ["Open", "Draft"] },
+          dueDate: { lt: new Date() },
+        },
+      }),
+      prisma.approval.count({ where: { organisationId: orgId, status: "Pending" } }),
       prisma.obligation.findMany({
         where: {
-          dueDate: {
-            gte: new Date(),
-            lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-          },
-          status: "DRAFT",
+          organisationId: orgId,
+          archivedAt: null,
+          deletedAt: null,
+          AND: [
+            { OR: [{ draftReviewStatus: "activated" }, { draftReviewStatus: null }] },
+            { OR: [
+              { filingDeadline: { gte: new Date(), lte: horizon } },
+              { paymentDeadline: { gte: new Date(), lte: horizon } },
+              { internalTargetDate: { gte: new Date(), lte: horizon } },
+            ] },
+          ],
         },
-        orderBy: { dueDate: "asc" },
+        orderBy: [{ filingDeadline: "asc" }, { paymentDeadline: "asc" }],
         take: 10,
-        include: { entity: true, rule: true },
+        include: { entity: true, ruleVersion: { include: { rule: true } } },
       }),
       prisma.entity.findMany({
-        where: { organisationId: orgId },
+        where: { organisationId: orgId, deletedAt: null },
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
@@ -66,6 +106,18 @@ export default async function DashboardPage() {
           <div className="stat-value">{runningExtractionCount}</div>
           <div className="stat-label">Extractions running</div>
         </div>
+        <Link href="/exceptions" className="stat-card" style={{ textDecoration: "none" }}>
+          <div className="stat-value">{blockingExceptionCount}</div>
+          <div className="stat-label">Filing blockers</div>
+        </Link>
+        <Link href="/data-requests" className="stat-card" style={{ textDecoration: "none" }}>
+          <div className="stat-value">{overdueRequestCount}</div>
+          <div className="stat-label">Overdue data requests</div>
+        </Link>
+        <Link href="/approvals" className="stat-card" style={{ textDecoration: "none" }}>
+          <div className="stat-value">{pendingApprovalCount}</div>
+          <div className="stat-label">Pending approvals</div>
+        </Link>
       </div>
 
       {/* Upcoming obligations */}
@@ -98,10 +150,12 @@ export default async function DashboardPage() {
             </thead>
             <tbody>
               {upcoming.map((ob) => {
-                const isOverdue = ob.dueDate < new Date();
+                const dueDate = ob.filingDeadline ?? ob.paymentDeadline ?? ob.internalTargetDate;
+                if (!dueDate) return null;
+                const isOverdue = dueDate < new Date();
                 const isSoon =
                   !isOverdue &&
-                  ob.dueDate < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+                  dueDate < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
                 return (
                   <tr key={ob.id}>
                     <td
@@ -113,17 +167,26 @@ export default async function DashboardPage() {
                           : undefined
                       }
                     >
-                      {fmtDate(ob.dueDate)}
+                      {fmtDate(dueDate)}
                     </td>
-                    <td>{ob.title}</td>
                     <td>
-                      <Link href={`/entities/${ob.entityId}`}>
-                        {ob.entity.legalName}
-                      </Link>
+                      <Link href={`/obligations/${ob.id}`}>{ob.description}</Link>
+                      {ob.ruleVersion && (
+                        <div className="text-muted text-sm">
+                          {ob.ruleVersion.rule.ruleKey} · v{ob.ruleVersion.version}
+                        </div>
+                      )}
                     </td>
-                    <td className="text-muted text-sm">{ob.period}</td>
                     <td>
-                      <span className="badge badge-grey">{ob.status}</span>
+                      {ob.entity ? (
+                        <Link href={`/entities/${ob.entity.id}`}>{ob.entity.legalName}</Link>
+                      ) : "—"}
+                    </td>
+                    <td className="text-muted text-sm">
+                      {ob.periodEnd ? `Ended ${fmtDate(ob.periodEnd)}` : "—"}
+                    </td>
+                    <td>
+                      <span className="badge badge-grey">{ob.overallWorkflowStatus}</span>
                     </td>
                   </tr>
                 );

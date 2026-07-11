@@ -2,15 +2,21 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireOrg } from "@/lib/auth";
 import { NavLink } from "./nav-link";
+import { documentAccessWhere } from "@/lib/authz";
 
 const OPEN_REVIEW_STATUSES = ["Needs review", "In review", "Needs adviser input", "Needs source verification"];
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   let openReviewCount = 0;
   try {
-    const { orgId } = await requireOrg();
+    const context = await requireOrg();
+    const { orgId } = context;
     openReviewCount = await prisma.reviewItem.count({
-      where: { organisationId: orgId, reviewStatus: { in: OPEN_REVIEW_STATUSES } },
+      where: {
+        organisationId: orgId,
+        document: documentAccessWhere(context, "view"),
+        reviewStatus: { in: OPEN_REVIEW_STATUSES },
+      },
     });
   } catch {
     openReviewCount = 0;
@@ -20,8 +26,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <Link href="/" className="sidebar-mark">
-          <span className="mark-glyph">T</span>
-          <span className="mark-name">Tax-Able</span>
+          <span className="mark-glyph">t</span>
+          <span className="mark-name">tax-able</span>
         </Link>
 
         <nav className="nav">
@@ -34,8 +40,18 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="nav-section-label">Registers</div>
           <NavLink href="/entities">Entity Register</NavLink>
+          <NavLink href="/groups">Group Structure</NavLink>
+          <NavLink href="/registrations">Tax Registrations</NavLink>
+          <NavLink href="/periods">Accounting Periods</NavLink>
           <NavLink href="/obligations">Obligation Register</NavLink>
           <NavLink href="/actions-register">Actions Register</NavLink>
+          <NavLink href="/assumptions">Assumptions</NavLink>
+          <NavLink href="/caveats">Caveats</NavLink>
+          <NavLink href="/tripwires">Tripwires</NavLink>
+          <NavLink href="/exceptions">Exceptions</NavLink>
+          <NavLink href="/evidence">Evidence</NavLink>
+          <NavLink href="/data-requests">Data Requests</NavLink>
+          <NavLink href="/approvals">Approvals</NavLink>
           <NavLink href="/obligations/drafts">Draft Obligations</NavLink>
           <NavLink href="/documents">Document Vault</NavLink>
 
@@ -46,8 +62,10 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           <NavLink href="/sources/conflicts">Conflicts</NavLink>
 
           <div className="nav-section-label">Reference</div>
-          <NavLink href="/rules">Obligation Rules</NavLink>
-          <NavLink href="/rules-pack">Rules Pack</NavLink>
+          <NavLink href="/rules-pack">Controlled Rules</NavLink>
+          <NavLink href="/rule-impact">Rule Impacts</NavLink>
+          <NavLink href="/ai-assurance">AI Assurance</NavLink>
+          <NavLink href="/audit">Audit History</NavLink>
         </nav>
 
         <div className="sidebar-foot">Tax obligations register</div>

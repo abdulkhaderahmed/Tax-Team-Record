@@ -11,8 +11,9 @@ import {
 import { REQUIREMENT_FLAG_LABELS } from "@/lib/raci-constants";
 
 export type EntityOption = { id: string; legalName: string };
+export type DocumentOption = { id: string; filename: string; versionNumber: number };
 
-export type ManualObligationFormValues = {
+export type ObligationFormValues = {
   entityId?: string | null;
   regime?: string;
   obligationType?: string;
@@ -62,33 +63,37 @@ export type ManualObligationFormValues = {
   exceptionRequired?: boolean;
 
   sourceType?: string | null;
+  sourceDocumentId?: string | null;
   sourceDocumentReference?: string | null;
   sourcePageParagraph?: string | null;
-  createdBy?: string | null;
-  lastUpdatedBy?: string | null;
 };
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
-  defaultValues?: ManualObligationFormValues;
+  defaultValues?: ObligationFormValues;
   entities: EntityOption[];
+  documents: DocumentOption[];
   cancelHref: string;
   submitLabel?: string;
+  canReviewControls?: boolean;
+  isNew?: boolean;
 };
 
 function StatusSelect({
   name,
   label,
   defaultValue,
+  disabled = false,
 }: {
   name: string;
   label: string;
   defaultValue?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="form-group">
       <label htmlFor={name}>{label}</label>
-      <select id={name} name={name} defaultValue={defaultValue ?? "Not started"}>
+      <select id={name} name={name} defaultValue={defaultValue ?? "Not started"} disabled={disabled}>
         {STATUS_VALUES.map((s) => (
           <option key={s} value={s}>{s}</option>
         ))}
@@ -97,12 +102,15 @@ function StatusSelect({
   );
 }
 
-export function ManualObligationForm({
+export function ObligationForm({
   action,
   defaultValues: d = {},
   entities,
+  documents,
   cancelHref,
   submitLabel = "Save Obligation",
+  canReviewControls = false,
+  isNew = false,
 }: Props) {
   return (
     <form action={action} className="form-page">
@@ -272,7 +280,8 @@ export function ManualObligationForm({
             return (
             <div className="checkbox-row" key={key} style={{ marginBottom: 0 }}>
               <input type="checkbox" id={key} name={key}
-                defaultChecked={(d[key as keyof ManualObligationFormValues] as boolean) ?? defaultForNew} />
+                disabled={!canReviewControls && Boolean(d[key as keyof ObligationFormValues])}
+                defaultChecked={(d[key as keyof ObligationFormValues] as boolean) ?? defaultForNew} />
               <label htmlFor={key}>{REQUIREMENT_FLAG_LABELS[key]}</label>
             </div>
             );
@@ -283,19 +292,24 @@ export function ManualObligationForm({
       {/* ── 5. Status ────────────────────────────────────── */}
       <div className="panel">
         <h2>Status</h2>
+        {isNew ? (
+          <div className="alert alert-info">
+            New records start at “Not started”. Data, evidence and approval states are then derived from their linked registers and independent decisions.
+          </div>
+        ) : <>
         <div className="form-grid">
           <StatusSelect name="dataCompletenessStatus" label="Data completeness"
-            defaultValue={d.dataCompletenessStatus} />
+            defaultValue={d.dataCompletenessStatus} disabled />
           <StatusSelect name="dataValidationStatus" label="Data validation"
-            defaultValue={d.dataValidationStatus} />
+            defaultValue={d.dataValidationStatus} disabled={!canReviewControls} />
           <StatusSelect name="technicalReviewStatus" label="Technical review"
-            defaultValue={d.technicalReviewStatus} />
+            defaultValue={d.technicalReviewStatus} disabled />
           <StatusSelect name="approvalStatus" label="Approval"
-            defaultValue={d.approvalStatus} />
+            defaultValue={d.approvalStatus} disabled />
           <StatusSelect name="workflowProgressStatus" label="Workflow progress"
             defaultValue={d.workflowProgressStatus} />
           <StatusSelect name="evidenceStatus" label="Evidence"
-            defaultValue={d.evidenceStatus} />
+            defaultValue={d.evidenceStatus} disabled />
           <StatusSelect name="filingSubmissionStatus" label="Filing / submission"
             defaultValue={d.filingSubmissionStatus} />
           <StatusSelect name="paymentStatus" label="Payment"
@@ -304,15 +318,15 @@ export function ManualObligationForm({
         <div className="form-grid" style={{ marginTop: 8 }}>
           <div className="form-group">
             <label htmlFor="overallStatusOverride">Overall status override</label>
-            <select id="overallStatusOverride" name="overallStatusOverride" defaultValue="">
+            <select id="overallStatusOverride" name="overallStatusOverride" defaultValue="" disabled={!canReviewControls}>
               <option value="">— let the system compute it —</option>
               {STATUS_VALUES.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
             <div className="form-hint">
-              Current: {d.overallWorkflowStatus ?? "Not started"}. Leave blank to recompute
-              automatically from the statuses above; pick a value to override it manually.
+              Current: {d.overallWorkflowStatus ?? "Not started"}. Overall readiness is recalculated from active controls.
+              {!canReviewControls && " Review permission is required for an override."}
             </div>
           </div>
           <div className="form-group">
@@ -321,6 +335,7 @@ export function ManualObligationForm({
               placeholder="Recorded in status history" />
           </div>
         </div>
+        </>}
       </div>
 
       {/* ── 5. Evidence ──────────────────────────────────── */}
@@ -370,6 +385,7 @@ export function ManualObligationForm({
           <div className="form-group">
             <div className="checkbox-row" style={{ marginBottom: 0, marginTop: 20 }}>
               <input type="checkbox" id="exceptionRequired" name="exceptionRequired"
+                disabled={!canReviewControls && Boolean(d.exceptionRequired)}
                 defaultChecked={d.exceptionRequired ?? false} />
               <label htmlFor="exceptionRequired">Exception required</label>
             </div>
@@ -385,6 +401,7 @@ export function ManualObligationForm({
           <div className="form-group span2">
             <label htmlFor="openIssueBlocker">Open issue / blocker</label>
             <textarea id="openIssueBlocker" name="openIssueBlocker" rows={2}
+              disabled={!canReviewControls && Boolean(d.exceptionRequired && d.openIssueBlocker)}
               defaultValue={d.openIssueBlocker ?? ""}
               placeholder="Any blockers or open issues preventing completion" />
           </div>
@@ -413,6 +430,16 @@ export function ManualObligationForm({
           </div>
 
           <div className="form-group">
+            <label htmlFor="sourceDocumentId">Linked source document</label>
+            <select id="sourceDocumentId" name="sourceDocumentId" defaultValue={d.sourceDocumentId ?? ""}>
+              <option value="">— no linked vault document —</option>
+              {documents.map((document) => (
+                <option key={document.id} value={document.id}>{document.filename} · v{document.versionNumber}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="sourceDocumentReference">Source document reference</label>
             <input type="text" id="sourceDocumentReference" name="sourceDocumentReference"
               defaultValue={d.sourceDocumentReference ?? ""} placeholder="Document name or ID" />
@@ -424,16 +451,8 @@ export function ManualObligationForm({
               defaultValue={d.sourcePageParagraph ?? ""} placeholder="e.g. p.12, para 4.3" />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="createdBy">Created by</label>
-            <input type="text" id="createdBy" name="createdBy"
-              defaultValue={d.createdBy ?? ""} placeholder="Your name" />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="lastUpdatedBy">Last updated by</label>
-            <input type="text" id="lastUpdatedBy" name="lastUpdatedBy"
-              defaultValue={d.lastUpdatedBy ?? ""} placeholder="Updater name" />
+          <div className="form-hint span2">
+            Creator and updater are recorded automatically from the authenticated user; they cannot be supplied by this form.
           </div>
         </div>
       </div>

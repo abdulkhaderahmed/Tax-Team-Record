@@ -1,10 +1,25 @@
 import { prisma } from "@/lib/prisma";
-import { archiveDocument } from "@/app/actions/documents";
+import {
+  archiveDocument,
+  grantDocumentAccess,
+  reviewDocumentReliance,
+  tombstoneDocument,
+  updateDocumentAccessSettings,
+  verifyDocumentSource,
+} from "@/app/actions/documents";
 import { startExtraction } from "@/app/actions/extraction";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HEALTH_MARKERS } from "@/lib/doc-constants";
-import { requireOrg } from "@/lib/auth";
+import { requireDocumentAccess } from "@/lib/authz";
+import { canUseDocumentPermission } from "@/lib/authz-policy";
+import {
+  PRIVILEGE_STATUSES,
+  RELIANCE_STATUSES,
+  SENSITIVITY_LEVELS,
+  SOURCE_CONFIDENCE_LEVELS,
+  YES_NO_UNKNOWN,
+} from "@/lib/doc-constants";
 
 
 function fmt(d: Date | null) {
@@ -24,16 +39,63 @@ export default async function DocumentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
-
   const { id } = await params;
+  const { context } = await requireDocumentAccess(id, "view");
+  const orgId = context.orgId;
+  const now = new Date();
   const [doc, extractionRuns] = await Promise.all([
-    prisma.document.findUnique({
-      where: { id },
+    prisma.document.findFirst({
+      where: { id, organisationId: orgId, deletedAt: null },
       include: {
         entity: { select: { id: true, legalName: true } },
         sourceSystem: { select: { id: true, name: true } },
+        uploadedBy: { select: { id: true, name: true, email: true } },
+        sourceVerifiedBy: { select: { id: true, name: true } },
+        supersedes: {
+          select: {
+            id: true,
+            organisationId: true,
+            filename: true,
+            versionNumber: true,
+            restrictedAccess: true,
+            deletedAt: true,
+            accessGrants: {
+              where: { organisationId: context.orgId, userId: context.userId, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+              select: { permission: true },
+              take: 1,
+            },
+          },
+        },
+        supersededBy: {
+          select: {
+            id: true,
+            organisationId: true,
+            filename: true,
+            versionNumber: true,
+            restrictedAccess: true,
+            deletedAt: true,
+            accessGrants: {
+              where: { organisationId: context.orgId, userId: context.userId, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+              select: { permission: true },
+              take: 1,
+            },
+          },
+        },
+        accessGrants: { include: { user: { select: { id: true, name: true, email: true } } } },
+        recordLinks: {
+          include: {
+            obligation: { select: { id: true, description: true } },
+            action: { select: { id: true, description: true } },
+            assumption: { select: { id: true, assumptionStatement: true } },
+            caveat: { select: { id: true, caveatText: true } },
+            tripwire: { select: { id: true, description: true } },
+            exception: { select: { id: true, title: true } },
+            evidence: { select: { id: true, title: true } },
+            createdBy: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        _count: { select: { obligations: true, actions: true, assumptions: true, caveats: true, tripwires: true, exceptions: true, evidenceItems: true } },
         chunks: { orderBy: { chunkIndex: "asc" } },
         healthFlags: { orderBy: { chunkIndex: "asc" } },
       },
@@ -44,12 +106,51 @@ export default async function DocumentDetailPage({
       orderBy: { startedAt: "desc" },
     }),
   ]);
-  if (!doc || doc.organisationId !== orgId) notFound();
+  if (!doc) notFound();
 
   const archive = archiveDocument.bind(null, doc.id);
+  const tombstone = tombstoneDocument.bind(null, doc.id);
+  const verify = verifyDocumentSource.bind(null, doc.id);
+  const reviewReliance = reviewDocumentReliance.bind(null, doc.id);
+  const updateSecurity = updateDocumentAccessSettings.bind(null, doc.id);
+  const grant = grantDocumentAccess.bind(null, doc.id);
   const extract = startExtraction.bind(null, doc.id);
   const isArchived = doc.status === "Archived";
   const hasText = doc.chunks.length > 0 && doc.chunks[0].text.length > 0;
+  const currentGrant = doc.accessGrants.find(
+    (access) =>
+      access.organisationId === context.orgId &&
+      access.userId === context.userId &&
+      (access.expiresAt == null || access.expiresAt > now),
+  );
+  const canEdit = canUseDocumentPermission(
+    context.user.role,
+    doc.restrictedAccess,
+    currentGrant?.permission,
+    "edit",
+  );
+  const canReview = canUseDocumentPermission(
+    context.user.role,
+    doc.restrictedAccess,
+    currentGrant?.permission,
+    "review",
+  );
+  const canManage = canUseDocumentPermission(
+    context.user.role,
+    doc.restrictedAccess,
+    currentGrant?.permission,
+    "manage",
+  );
+  const canViewVersion = (version: typeof doc.supersedes) =>
+    version != null &&
+    version.organisationId === context.orgId &&
+    version.deletedAt == null &&
+    canUseDocumentPermission(
+      context.user.role,
+      version.restrictedAccess,
+      version.accessGrants[0]?.permission,
+      "view",
+    );
 
   // Group health flags by marker key
   const flagsByMarker: Record<string, typeof doc.healthFlags> = {};
@@ -88,15 +189,15 @@ export default async function DocumentDetailPage({
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <a href={`/api/documents/${doc.id}/file`} className="btn">Download</a>
-            {!isArchived && hasText && (
+            {!isArchived && hasText && canEdit && (
               <form action={extract} style={{ display: "inline" }}>
                 <button type="submit" className="btn btn-primary">Run AI Extraction</button>
               </form>
             )}
-            {!isArchived && (
+            {!isArchived && canEdit && (
               <Link href={`/documents/${doc.id}/edit`} className="btn">Edit</Link>
             )}
-            {!isArchived && (
+            {!isArchived && canEdit && (
               <form action={archive} style={{ display: "inline" }}>
                 <button type="submit" className="btn"
                   style={{ color: "var(--overdue)", borderColor: "var(--overdue)" }}>
@@ -168,7 +269,7 @@ export default async function DocumentDetailPage({
               </div>
               <div className="detail-item">
                 <span className="detail-label">Uploaded by</span>
-                <span className="detail-value">{doc.uploadedBy || "—"}</span>
+                <span className="detail-value">{doc.uploadedBy ? `${doc.uploadedBy.name} (${doc.uploadedBy.id})` : "Legacy/system"}</span>
               </div>
               <div className="detail-item">
                 <span className="detail-label">Document date</span>
@@ -184,7 +285,15 @@ export default async function DocumentDetailPage({
               </div>
               <div className="detail-item">
                 <span className="detail-label">Version</span>
-                <span className="detail-value">{doc.versionLabel || "—"}</span>
+                <span className="detail-value">Record v{doc.versionNumber}{doc.versionLabel ? ` · ${doc.versionLabel}` : ""}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Supersedes</span>
+                <span className="detail-value">{doc.supersedes ? (canViewVersion(doc.supersedes) ? <Link href={`/documents/${doc.supersedes.id}`}>{doc.supersedes.filename} · v{doc.supersedes.versionNumber}</Link> : "Restricted document") : "—"}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Superseded by</span>
+                <span className="detail-value">{doc.supersededBy ? (canViewVersion(doc.supersededBy) ? <Link href={`/documents/${doc.supersededBy.id}`}>{doc.supersededBy.filename} · v{doc.supersededBy.versionNumber}</Link> : "Restricted document") : "—"}</span>
               </div>
               <div className="detail-item">
                 <span className="detail-label">Related entity</span>
@@ -230,6 +339,20 @@ export default async function DocumentDetailPage({
                 </div>
               )}
             </div>
+            {canManage && !isArchived && (
+              <form action={updateSecurity} className="form-grid" style={{ marginTop: 16 }}>
+                <div className="form-group"><label>Sensitivity level</label><select name="sensitivityLevel" defaultValue={doc.sensitivityLevel}>{SENSITIVITY_LEVELS.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Privilege status</label><select name="privilegeStatus" defaultValue={doc.privilegeStatus}>{PRIVILEGE_STATUSES.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Personal data</label><select name="containsPersonalData" defaultValue={doc.containsPersonalData}>{YES_NO_UNKNOWN.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Special-category data</label><select name="containsSpecialCategory" defaultValue={doc.containsSpecialCategory}>{YES_NO_UNKNOWN.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Payroll data</label><select name="containsPayrollData" defaultValue={doc.containsPayrollData}>{YES_NO_UNKNOWN.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>M&amp;A / restructuring data</label><select name="containsMaData" defaultValue={doc.containsMaData}>{YES_NO_UNKNOWN.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <label className="flex gap8"><input type="checkbox" name="restrictedAccess" value="true" defaultChecked={doc.restrictedAccess} /> Restricted access</label>
+                <div className="form-group"><label>Access notes</label><textarea name="accessNotes" rows={2} defaultValue={doc.accessNotes ?? ""} /></div>
+                <div className="form-group"><label>Security change rationale</label><input name="reason" required placeholder="Why this classification or restriction is changing" /></div>
+                <button type="submit" className="btn btn-secondary">Update controlled security settings</button>
+              </form>
+            )}
           </div>
         </div>
 
@@ -249,8 +372,98 @@ export default async function DocumentDetailPage({
               <span className="detail-label">Source confidence</span>
               <span className="detail-value">{doc.sourceConfidence}</span>
             </div>
+            <div className="detail-item">
+              <span className="detail-label">Last source verification</span>
+              <span className="detail-value">
+                {doc.sourceVerifiedAt ? `${fmt(doc.sourceVerifiedAt)} · ${doc.sourceVerifiedBy?.name ?? doc.sourceVerifiedById}` : "Not verified"}
+              </span>
+            </div>
           </div>
+          {canReview && !isArchived ? (
+            <>
+              <form action={reviewReliance} className="form-grid" style={{ marginTop: 16 }}>
+                <div className="form-group"><label>Reliance status</label><select name="relianceStatus" defaultValue={doc.relianceStatus}>{RELIANCE_STATUSES.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Authoritative source?</label><select name="isAuthoritativeSource" defaultValue={doc.isAuthoritativeSource}>{YES_NO_UNKNOWN.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Source confidence</label><select name="sourceConfidence" defaultValue={doc.sourceConfidence}>{SOURCE_CONFIDENCE_LEVELS.map((value) => <option key={value}>{value}</option>)}</select></div>
+                <div className="form-group"><label>Review rationale</label><input name="note" required placeholder="Evidence and judgement supporting this decision" /></div>
+                <button type="submit" className="btn btn-secondary">Record reliance review</button>
+              </form>
+              <form action={verify} style={{ marginTop: 12 }}>
+                <input name="note" className="form-input" required placeholder="Independent source-verification rationale" />
+                <button type="submit" className="btn btn-secondary btn-sm" style={{ marginTop: 8 }}>Confirm source verification</button>
+              </form>
+            </>
+          ) : (
+            <p className="text-sm text-muted" style={{ marginTop: 12 }}>
+              Reliance and authority decisions require document-review permission and, for restricted files, an explicit review grant.
+            </p>
+          )}
         </div>
+
+        <div className="panel" style={{ marginBottom: 20 }}>
+          <h2>Linked system-of-record items</h2>
+          <p className="text-sm text-muted">{doc.recordLinks.length} relational provenance link(s). The counts below also include legacy primary-document pointers.</p>
+          <div className="detail-grid cols3">
+            <div className="detail-item"><span className="detail-label">Obligations</span><span className="detail-value">{doc._count.obligations}</span></div>
+            <div className="detail-item"><span className="detail-label">Actions</span><span className="detail-value">{doc._count.actions}</span></div>
+            <div className="detail-item"><span className="detail-label">Assumptions / caveats / tripwires</span><span className="detail-value">{doc._count.assumptions + doc._count.caveats + doc._count.tripwires}</span></div>
+            <div className="detail-item"><span className="detail-label">Exceptions</span><span className="detail-value">{doc._count.exceptions}</span></div>
+            <div className="detail-item"><span className="detail-label">Evidence</span><span className="detail-value">{doc._count.evidenceItems}</span></div>
+          </div>
+          {doc.recordLinks.length > 0 && (
+            <div className="table-scroll" style={{ marginTop: 14 }}>
+              <table className="data-table">
+                <thead><tr><th>Record</th><th>Relationship</th><th>Source location</th><th>Linked by</th></tr></thead>
+                <tbody>
+                  {doc.recordLinks.map((link) => {
+                    const record = link.obligation
+                      ? { label: link.obligation.description, href: `/obligations/${link.obligation.id}`, type: "Obligation" }
+                      : link.action
+                        ? { label: link.action.description, href: `/actions-register/${link.action.id}`, type: "Action" }
+                        : link.assumption
+                          ? { label: link.assumption.assumptionStatement, href: "/assumptions", type: "Assumption" }
+                          : link.caveat
+                            ? { label: link.caveat.caveatText, href: "/caveats", type: "Caveat" }
+                            : link.tripwire
+                              ? { label: link.tripwire.description, href: "/tripwires", type: "Tripwire" }
+                              : link.exception
+                                ? { label: link.exception.title, href: "/exceptions", type: "Exception" }
+                                : link.evidence
+                                  ? { label: link.evidence.title, href: "/evidence", type: "Evidence" }
+                                  : null;
+                    return record ? (
+                      <tr key={link.id}>
+                        <td><span className="badge badge-grey">{record.type}</span> <Link href={record.href}>{record.label}</Link></td>
+                        <td>{link.linkType}</td>
+                        <td>{link.pageReference ?? "—"}</td>
+                        <td>{link.createdBy ? `${link.createdBy.name} (${link.createdBy.id})` : "Migration/system"}</td>
+                      </tr>
+                    ) : null;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {doc.restrictedAccess && canManage && (
+          <div className="panel" style={{ marginBottom: 20 }}>
+            <h2>Document access</h2>
+            {doc.accessGrants.map((access) => (
+              <div key={access.id} className="text-sm" style={{ marginBottom: 6 }}>
+                {access.user.name} ({access.user.id}) · {access.permission}
+              </div>
+            ))}
+            <form action={grant} className="form-grid" style={{ marginTop: 12 }}>
+              <input name="userId" className="form-input" required placeholder="Authenticated user ID" />
+              <select name="permission" className="form-input" defaultValue="view">
+                <option value="view">View</option><option value="edit">Edit</option><option value="review">Review</option><option value="manage">Manage</option>
+              </select>
+              <input name="reason" className="form-input" placeholder="Grant reason" />
+              <button type="submit" className="btn btn-secondary">Grant access</button>
+            </form>
+          </div>
+        )}
 
         {/* Health flags */}
         {doc.healthFlags.length > 0 && (
@@ -300,7 +513,7 @@ export default async function DocumentDetailPage({
         <div className="panel">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <h2 style={{ margin: 0 }}>AI Extraction runs</h2>
-            {hasText && !isArchived && (
+            {hasText && !isArchived && canEdit && (
               <form action={extract}>
                 <button type="submit" className="btn btn-primary btn-sm">Run new extraction</button>
               </form>
@@ -363,6 +576,19 @@ export default async function DocumentDetailPage({
             </table>
           )}
         </div>
+
+        {canManage && (
+          <div className="panel" style={{ borderColor: "var(--overdue)", marginTop: 20 }}>
+            <h2>Deletion control</h2>
+            <p className="text-sm text-muted">
+              Tombstone this record and remove it from active views while preserving audit provenance. The stored file is retained for controlled retention review.
+            </p>
+            <form action={tombstone}>
+              <input name="reason" className="form-input" required placeholder="Deletion reason" />
+              <button type="submit" className="btn btn-danger btn-sm" style={{ marginTop: 8 }}>Tombstone document</button>
+            </form>
+          </div>
+        )}
       </div>
     </>
   );

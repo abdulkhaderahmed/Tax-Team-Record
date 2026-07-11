@@ -1,5 +1,7 @@
 # Applying TaxGPT to Tax-Team-Record / Tax-Able — Integration & Improvement Plan
 
+> Historical gap assessment written before the 2026-07-11 advice-to-control repair. Hard-coded organisation/reviewer attribution, unverified quote grounding, missing OCR, missing benchmark harness and unversioned obligation rules described below have since been addressed in code. The independently reviewed five-document gold set, production accuracy metrics, provider abstraction and statute/RAG ideas remain future work. Use `../CURRENT_STATE.md` as the current implementation record.
+
 Context: this monorepo's `artifacts/tax-able` is a multi-tenant UK tax obligations register:
 GPT-4o strict-structured extraction (`src/lib/ai-extraction.ts`) → `ExtractionRun` → `ReviewItem`
 human review queue → promotion to live objects (Obligation/Action/Assumption/Tripwire…), with

@@ -45,7 +45,7 @@ export default async function ConflictsPage({
   const [conflicts, openCount] = await Promise.all([
     prisma.sourceConflict.findMany({
       where,
-      include: { dataCategory: true, entity: true, sourceA: true, sourceB: true },
+      include: { dataCategory: true, entity: true, sourceA: true, sourceB: true, reviewOwner: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.sourceConflict.count({
@@ -124,7 +124,7 @@ export default async function ConflictsPage({
                       </td>
                       <td><SeverityBadge severity={c.severity} /></td>
                       <td><StatusBadge status={c.status} /></td>
-                      <td>{c.reviewOwner || <span style={{ color: "var(--ink-tertiary)" }}>—</span>}</td>
+                      <td>{c.reviewOwner ? `${c.reviewOwner.name} (${c.reviewOwner.id})` : <span style={{ color: "var(--ink-tertiary)" }}>—</span>}</td>
                       <td>
                         <Link href={`/sources/conflicts/${c.id}`} className="btn">View</Link>
                       </td>

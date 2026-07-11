@@ -44,7 +44,10 @@ export const REVIEW_STATUSES = [
 
 const baseFields = z.object({
   sourceText: z.string(),
+  sourceBlockId: z.string().min(1),
+  sourcePageNumber: z.number().int().positive().nullable(),
   sourceChunkPage: z.string().nullable().optional(),
+  sourceQuoteVerified: z.boolean().optional(),
   confidenceScore: z.number().min(0).max(1),
   isConditional: z.boolean(),
   conditionText: z.string().nullable().optional(),

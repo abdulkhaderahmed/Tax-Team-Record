@@ -1,24 +1,54 @@
 # Extraction pipeline — module explainer
 
 ## Purpose
-Turns an uploaded adviser document (PDF/DOCX) into structured, reviewable draft items — the "document intelligence" third of the product thesis. Never writes to live registers.
+
+Turn an uploaded adviser PDF/DOCX into page-grounded candidates that a human can convert into durable control records. The model is an intake assistant, never the control owner: AI output remains in `ReviewItem` until an authenticated reviewer creates/links a record or records an allowed, reasoned no-record disposition.
 
 ## Architecture
-Upload (document vault) → text extraction (pdf-parse for PDF, mammoth for DOCX) stored with the document → user triggers "Run AI Extraction" → server action calls gpt-4o with structured JSON output → **Zod discriminated union over 10 item types** (obligations, actions, assumptions, caveats, tripwires, evidence, valuations, R&D refs, capital-allowances refs, conflicts) validates the response → valid items land as `ReviewItem` rows under an `ExtractionRun` → per-run review UI offers Confirm / Reject / Needs-adviser-input / Create-live-obligation.
-Invariant: the only path from AI output to a register is a human clicking a confirm action.
 
-## Methodology
-Schema-first extraction: the Zod union both validates and *defines* what the model may say, converting hallucination into a validation failure instead of a bad row. The 10 types mirror the corpus analysis of real GT deliverables (strategy pack 01) — the taxonomy came from evidence, not intuition.
+```text
+versioned document
+  -> physical-page text extraction
+  -> conditional OCR for sparse PDF pages
+  -> deterministic page-aware blocks
+  -> leased ExtractionRun job with retry/backoff/heartbeat
+  -> structured model response + schema validation
+  -> quote/page verification
+  -> ReviewItem queue
+  -> human create/link or reasoned no-record disposition
+  -> DocumentRecordLink + ReviewItemRecordLink + audit event
+```
+
+PDF extraction preserves every physical page, including blanks, so a model citation can be checked against the original page number. Sparse pages can be OCR'd with Tesseract; native text wins unless OCR adds useful content. Model blocks are deterministic 8–12k units assembled on page boundaries, avoiding the former fixed-character truncation that could discard a document tail.
+
+Jobs are persisted with claim leases, heartbeat, capped retry count and exponential backoff. The worker can be run separately with `pnpm worker:extraction`; an application request is not required to remain open for the model call.
+
+## Review boundary
+
+The global `/review` queue and per-run page share the durable status model. Direct writes to final states are rejected. Confirming obligation, action, assumption, caveat, tripwire or evidence candidates creates the target, document link, review link and audit state in a transaction. Conditional advice must either preserve its condition or record how it was resolved. A fabricated/ambiguous quote cannot be treated as verified without an explicit source override reason.
+
+Duplicate, rejected and not-applicable outcomes do not use one-click global shortcuts. They require the reviewed/no-record disposition path, a reason and assurance that no durable record link already exists.
+
+## Benchmark boundary
+
+`eval/extraction-benchmark` contains:
+
+- a private-corpus manifest of exactly five PDF hashes/page counts;
+- a commit-safe draft concept inventory with no confidential source text;
+- metrics for material obligation/action recall, precision/false positives, condition preservation and strict citation accuracy; and
+- tests preventing duplicate predictions or incomplete targets from inflating results.
+
+All annotations remain `draft_unverified`. The AI-assurance page therefore disables accuracy claims and reports the release gates as not yet scorable.
 
 ## Counterfactual analysis
-- *Free-text extraction + second-pass structuring*: more tolerant of odd documents, rejected because two lossy hops compound error and the review UI needs typed items anyway.
-- *Direct-to-register with confidence thresholds*: faster loop, rejected as a product-identity violation (implementation-adjusted plan §2: "AI output is always draft").
-- *Chunked map-reduce over long docs*: not yet needed at ≤15MB advisory docs; becomes right if extraction quality degrades on 100+ page steps papers or context limits bite — measure via review-rejection rates per document length.
-- *Model choice*: gpt-4o incumbent; see D-009 — benchmark Claude on the GT corpus before pilot volume.
-Re-read: schema-first + human-confirm still holds; the weak point is synchronous execution, addressed by SPEC-003 Part B.
 
-## Known limitations & failure modes
-Synchronous run (client timeout on long docs — SPEC-003); no per-item source-page anchors yet (Phase 2 #1); confirmed non-obligation items have no live register to land in (Phase 2 #3); extraction quality on scanned/image PDFs unknown (pdf-parse is text-layer only — no OCR).
+- *Confidence-threshold auto-promotion*: rejected because self-reported confidence cannot own a tax control and no verified calibration set exists.
+- *Character chunks without page identity*: rejected because citation accuracy is a product gate and tail content can be lost.
+- *Synchronous extraction action*: rejected because timeouts and process restarts must not erase job state.
+- *Fine-tune before measuring*: rejected because the missing asset is a reviewed target set, not another unmeasured model.
 
-## Verification
-As-built behaviour confirmed via app interrogation 2026-07-08 (`main` @ 9b9cf55). Reviewer should re-verify: Zod schema location, exact ReviewItem statuses, and whether failed runs can orphan items (SPEC-003 exit criterion).
+## Verified and unproven
+
+Seven extraction-mechanics tests cover physical pages, OCR selection, tail processing, stable blocks, citation correction/rejection and retry backoff. Six benchmark tests cover manifest/inventory integrity and metric honesty. The production build and review-queue smoke test pass.
+
+No model prediction has yet been scored against an independently reviewed gold set. Production worker scheduling, dead-letter operations, model/service reliability and customer-document consent for any training use remain unproven or parked.

@@ -8,16 +8,16 @@ datasource db {
 }
 
 model Organisation {
-  id        String   @id @default(cuid())
-  name      String
+  id         String   @id @default(cuid())
+  name       String
   clerkOrgId String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   users               User[]
   entities            Entity[]
   auditEvents         AuditEvent[]
-  manualObligations   ManualObligation[]
+  obligations         Obligation[]
   sourceSystems       SourceSystem[]
   sourcePriorityRules SourcePriorityRule[]
   sourceConflicts     SourceConflict[]
@@ -25,8 +25,25 @@ model Organisation {
   reviewItems         ReviewItem[]
   actions             Action[]
   assumptions         Assumption[]
+  caveats             Caveat[]
   tripwires           Tripwire[]
   parties             Party[]
+  entityGroups        EntityGroup[]
+  entityRelations     EntityRelation[]
+  taxRegistrations    TaxRegistration[]
+  taxRules            TaxRule[]
+  ruleImpactReviews   RuleImpactReview[]
+  exceptions          Exception[]
+  evidenceItems       EvidenceItem[]
+  dataRequests        DataRequest[]
+  reminders           Reminder[]
+  approvals           Approval[]
+  documentAccess      DocumentAccess[]
+  accountingPeriods   AccountingPeriod[]
+  regimeAssessments   RegimeAssessment[]
+  documentRecordLinks DocumentRecordLink[]
+  reviewRecordLinks   ReviewItemRecordLink[]
+  extractionRuns      ExtractionRun[]
 }
 
 model User {
@@ -40,7 +57,45 @@ model User {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  auditEvents AuditEvent[]
+  auditEvents                AuditEvent[]
+  rulesCreated               TaxRuleVersion[]       @relation("RuleVersionCreatedBy")
+  rulesReviewed              TaxRuleVersion[]       @relation("RuleVersionReviewedBy")
+  impactReviews              RuleImpactReview[]
+  documentAccess             DocumentAccess[]       @relation("DocumentAccessUser")
+  documentAccessGranted      DocumentAccess[]       @relation("DocumentAccessGrantedBy")
+  documentsSourceVerified    Document[]             @relation("DocumentSourceVerifiedBy")
+  obligationsDeleted         Obligation[]           @relation("ObligationDeletedBy")
+  actionsDeleted             Action[]               @relation("ActionDeletedBy")
+  exceptionsOwned            Exception[]            @relation("ExceptionOwner")
+  exceptionsResolved         Exception[]            @relation("ExceptionResolvedBy")
+  evidenceOwned              EvidenceItem[]         @relation("EvidenceOwner")
+  evidenceVerified           EvidenceItem[]         @relation("EvidenceVerifiedBy")
+  dataRequestsCreated        DataRequest[]          @relation("DataRequestCreatedBy")
+  dataRequestsAssigned       DataRequest[]          @relation("DataRequestAssignedTo")
+  remindersOwned             Reminder[]             @relation("ReminderOwner")
+  approvalsRequested         Approval[]             @relation("ApprovalRequestedBy")
+  approvalsAssigned          Approval[]             @relation("ApprovalApprover")
+  approvalsDecided           Approval[]             @relation("ApprovalDecidedBy")
+  taxRegistrationsVerified   TaxRegistration[]      @relation("TaxRegistrationVerifiedBy")
+  accountingPeriodsVerified  AccountingPeriod[]     @relation("AccountingPeriodVerifiedBy")
+  regimeAssessmentsConfirmed RegimeAssessment[]     @relation("RegimeAssessmentConfirmedBy")
+  obligationsCreated         Obligation[]           @relation("ObligationCreatedBy")
+  obligationsUpdated         Obligation[]           @relation("ObligationUpdatedBy")
+  actionsCreated             Action[]               @relation("ActionCreatedBy")
+  actionsUpdated             Action[]               @relation("ActionUpdatedBy")
+  documentsUploaded          Document[]             @relation("DocumentUploadedBy")
+  extractionRunsCreated      ExtractionRun[]        @relation("ExtractionRunCreatedBy")
+  reviewItemsReviewed        ReviewItem[]           @relation("ReviewItemReviewedBy")
+  sourcePriorityRulesOwned   SourcePriorityRule[]   @relation("PriorityRuleReviewOwner")
+  sourceConflictsOwned       SourceConflict[]       @relation("SourceConflictReviewOwner")
+  assumptionsCreated         Assumption[]           @relation("AssumptionCreatedBy")
+  caveatsCreated             Caveat[]               @relation("CaveatCreatedBy")
+  tripwiresCreated           Tripwire[]             @relation("TripwireCreatedBy")
+  statusChanges              StatusHistory[]        @relation("StatusHistoryChangedBy")
+  documentRecordLinksCreated DocumentRecordLink[]   @relation("DocumentRecordLinkCreatedBy")
+  reviewRecordLinksCreated   ReviewItemRecordLink[] @relation("ReviewItemRecordLinkCreatedBy")
+  entitiesDeleted            Entity[]               @relation("EntityDeletedBy")
+  documentsDeleted           Document[]             @relation("DocumentDeletedBy")
 }
 
 model Entity {
@@ -72,11 +127,15 @@ model Entity {
   vatQuarterEndMonth    Int?
 
   // Payroll & Employment
-  payeRegistered Boolean @default(false)
-  hasErs         Boolean @default(false)
-  hasEmi         Boolean @default(false)
-  p11dRequired   Boolean @default(false)
-  psaRequired    Boolean @default(false)
+  payeRegistered                  Boolean @default(false)
+  hasErs                          Boolean @default(false)
+  hasEmi                          Boolean @default(false)
+  p11dRequired                    Boolean @default(false)
+  psaRequired                     Boolean @default(false)
+  benefitsReportingMethod         String  @default("P11D") // P11D | Voluntary payroll | Mandatory payroll | Mixed
+  hasLoansOrAccommodationBenefits Boolean @default(false)
+  psaAgreementStatus              String  @default("Not in place") // Not in place | Enduring | Amendment needed
+  psaPaymentMethod                String  @default("Electronic")
 
   // R&D
   rdClaimExpected      Boolean @default(false)
@@ -90,10 +149,11 @@ model Entity {
   specialRatePoolRelevant   Boolean @default(false)
 
   // Group & International
-  groupReliefRelevant     Boolean @default(false)
-  lossesBroughtForward    Boolean @default(false)
-  transferPricingRelevant Boolean @default(false)
-  hasPillar2              Boolean @default(false)
+  groupReliefRelevant         Boolean @default(false)
+  lossesBroughtForward        Boolean @default(false)
+  transferPricingRelevant     Boolean @default(false)
+  hasPillar2                  Boolean @default(false)
+  pillar2FirstReportingPeriod Boolean @default(true)
 
   // Governance
   saoInScope                  Boolean @default(false)
@@ -106,50 +166,268 @@ model Entity {
   payrollOwner    String?
   externalAdviser String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Group and associated-company structure
+  groupId                   String?
+  group                     EntityGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  parentEntityId            String?
+  parentEntity              Entity?      @relation("EntityHierarchy", fields: [parentEntityId], references: [id], onDelete: SetNull)
+  childEntities             Entity[]     @relation("EntityHierarchy")
+  qipAssociatedCompanyCount Int          @default(1)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  deletedById    String?
+  deletedBy      User?     @relation("EntityDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  deletionReason String?
 
   obligations       Obligation[]
   auditEvents       AuditEvent[]
-  manualObligations ManualObligation[]
   sourceConflicts   SourceConflict[]
   documents         Document[]
   reviewItems       ReviewItem[]
   actions           Action[]
   assumptions       Assumption[]
+  caveats           Caveat[]
   tripwires         Tripwire[]
+  outgoingRelations EntityRelation[]   @relation("RelationFromEntity")
+  incomingRelations EntityRelation[]   @relation("RelationToEntity")
+  taxRegistrations  TaxRegistration[]
+  ruleImpactReviews RuleImpactReview[]
+  exceptions        Exception[]
+  evidenceItems     EvidenceItem[]
+  dataRequests      DataRequest[]
+  approvals         Approval[]
+  accountingPeriods AccountingPeriod[]
+  regimeAssessments RegimeAssessment[]
 }
 
-model ObligationRule {
-  id          String   @id @default(cuid())
-  ruleKey     String   @unique
-  name        String
-  description String
-  appliesTo   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model EntityGroup {
+  id                     String             @id @default(cuid())
+  organisationId         String
+  organisation           Organisation       @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  name                   String
+  description            String?
+  associatedCompanyCount Int                @default(1)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  entities               Entity[]
+  regimeAssessments      RegimeAssessment[]
 
-  obligations Obligation[]
+  @@unique([organisationId, name])
+  @@index([organisationId])
+}
+
+model AccountingPeriod {
+  id                   String       @id @default(cuid())
+  organisationId       String
+  organisation         Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId             String
+  entity               Entity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  periodOfAccountStart DateTime
+  periodOfAccountEnd   DateTime
+  ctPeriodStart        DateTime
+  ctPeriodEnd          DateTime
+  periodType           String       @default("Corporation Tax")
+  status               String       @default("Confirmed") // Draft | Confirmed | Superseded
+  sourceDocumentId     String?
+  sourceDocument       Document?    @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  verifiedAt           DateTime?
+  verifiedById         String?
+  verifiedBy           User?        @relation("AccountingPeriodVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([entityId, ctPeriodStart, ctPeriodEnd])
+  @@index([organisationId])
+  @@index([entityId, status])
+}
+
+model RegimeAssessment {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  groupId        String?
+  group          EntityGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  regime         String
+  periodStart    DateTime
+  periodEnd      DateTime
+  outcome        String // In scope | Out of scope | Uncertain | Insufficient data
+  inputsJson     Json
+  rationale      String?
+  confirmedAt    DateTime?
+  confirmedById  String?
+  confirmedBy    User?        @relation("RegimeAssessmentConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([entityId, regime])
+  @@index([groupId, regime])
+}
+
+model EntityRelation {
+  id               String       @id @default(cuid())
+  organisationId   String
+  organisation     Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  fromEntityId     String
+  fromEntity       Entity       @relation("RelationFromEntity", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  toEntityId       String
+  toEntity         Entity       @relation("RelationToEntity", fields: [toEntityId], references: [id], onDelete: Cascade)
+  relationType     String // Parent | Subsidiary | Associated company | VAT group | CT group | Other
+  ownershipPct     Decimal?     @db.Decimal(7, 4)
+  effectiveFrom    DateTime?
+  effectiveTo      DateTime?
+  sourceDocumentId String?
+  sourceDocument   Document?    @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([organisationId, fromEntityId, toEntityId, relationType, effectiveFrom])
+  @@index([organisationId])
+}
+
+model TaxRegistration {
+  id                 String        @id @default(cuid())
+  organisationId     String
+  organisation       Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId           String
+  entity             Entity        @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  registrationType   String // Corporation Tax | VAT | PAYE | ERS | Pillar 2 | FATCA | CRS | Other
+  reference          String?
+  jurisdiction       String        @default("United Kingdom")
+  status             String        @default("Active")
+  effectiveFrom      DateTime?
+  effectiveTo        DateTime?
+  sourceSystemId     String?
+  sourceSystem       SourceSystem? @relation(fields: [sourceSystemId], references: [id], onDelete: SetNull)
+  sourceVerifiedAt   DateTime?
+  sourceVerifiedById String?
+  sourceVerifiedBy   User?         @relation("TaxRegistrationVerifiedBy", fields: [sourceVerifiedById], references: [id], onDelete: SetNull)
+  notes              String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([entityId, registrationType, jurisdiction])
+  @@index([organisationId])
+  @@index([entityId])
+}
+
+model TaxRule {
+  id             String           @id @default(cuid())
+  organisationId String
+  organisation   Organisation     @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  ruleKey        String
+  regime         String
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  versions       TaxRuleVersion[]
+
+  @@unique([organisationId, ruleKey])
+  @@index([organisationId])
+}
+
+/// Read-only archive of the retired pre-controlled-content rule records. These
+/// rows are never evaluated by the generator; they exist solely for migration
+/// and audit traceability.
+model LegacyRuleSnapshot {
+  id              String   @id
+  ruleKey         String   @unique
+  name            String
+  description     String
+  appliesTo       String
+  sourceCreatedAt DateTime
+  sourceUpdatedAt DateTime
+  retiredAt       DateTime @default(now())
+}
+
+model TaxRuleVersion {
+  id                     String          @id @default(cuid())
+  ruleId                 String
+  rule                   TaxRule         @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  version                Int
+  name                   String
+  description            String
+  obligationType         String
+  statutoryBasis         String
+  statutoryUrl           String
+  authorityLevel         String // Legislation | Statutory notice | HMRC manual | GOV.UK guidance | Draft guidance
+  legalStatus            String // Enacted | In force | Administrative | Interim draft
+  triggerDescription     String
+  triggerConfig          Json
+  calculationKey         String
+  calculationDescription String
+  recurrence             String
+  effectiveFrom          DateTime
+  effectiveTo            DateTime?
+  status                 String          @default("Draft") // Draft | Approved | Superseded | Withdrawn
+  humanReviewRequired    Boolean         @default(false)
+  changeRationale        String
+  sourceLastCheckedAt    DateTime
+  logicHash              String?
+  engineVersion          String // Immutable deterministic engine identifier reviewed with this content version
+  createdById            String
+  createdBy              User            @relation("RuleVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedById           String?
+  reviewedBy             User?           @relation("RuleVersionReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt             DateTime?
+  supersedesVersionId    String?         @unique
+  supersedesVersion      TaxRuleVersion? @relation("RuleVersionSupersession", fields: [supersedesVersionId], references: [id], onDelete: SetNull)
+  supersededByVersion    TaxRuleVersion? @relation("RuleVersionSupersession")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  obligations   Obligation[]
+  impactReviews RuleImpactReview[]
+  citations     RuleCitation[]
+
+  @@unique([ruleId, version])
+  @@index([ruleId, status, effectiveFrom])
+  @@index([engineVersion])
+}
+
+model RuleCitation {
+  id             String         @id @default(cuid())
+  ruleVersionId  String
+  ruleVersion    TaxRuleVersion @relation(fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  title          String
+  url            String
+  authorityLevel String
+  locator        String?
+  checkedAt      DateTime
+  createdAt      DateTime       @default(now())
+
+  @@unique([ruleVersionId, url])
+  @@index([ruleVersionId])
+}
+
+model RuleImpactReview {
+  id             String         @id @default(cuid())
+  organisationId String
+  organisation   Organisation   @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  ruleVersionId  String
+  ruleVersion    TaxRuleVersion @relation(fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  entityId       String
+  entity         Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  status         String         @default("Needs review") // Needs review | Confirmed applicable | Not applicable | Remediated
+  impactSummary  String
+  dueDate        DateTime?
+  reviewedById   String?
+  reviewedBy     User?          @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  reviewNote     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([ruleVersionId, entityId])
+  @@index([organisationId, status])
 }
 
 model Obligation {
-  id        String         @id @default(cuid())
-  entityId  String
-  entity    Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  ruleId    String
-  rule      ObligationRule @relation(fields: [ruleId], references: [id])
-  title     String
-  dueDate   DateTime
-  period    String
-  status    String         @default("DRAFT")
-  notes     String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-
-  auditEvents AuditEvent[]
-}
-
-model ManualObligation {
   id             String       @id @default(cuid())
   organisationId String
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
@@ -215,8 +493,10 @@ model ManualObligation {
   sourceType              String?
   sourceDocumentReference String?
   sourcePageParagraph     String?
-  createdBy               String?
-  lastUpdatedBy           String?
+  createdById             String?
+  createdBy               User?   @relation("ObligationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  lastUpdatedById         String?
+  lastUpdatedBy           User?   @relation("ObligationUpdatedBy", fields: [lastUpdatedById], references: [id], onDelete: SetNull)
 
   // Rules-pack / draft generation
   ruleId            String?
@@ -225,8 +505,26 @@ model ManualObligation {
   draftReviewStatus String? // pending | activated | rejected | not_applicable
   draftNote         String?
   generationBatchId String?
+  occurrenceKey     String?
 
-  archivedAt DateTime?
+  // Controlled rule provenance
+  ruleVersionId     String?
+  ruleVersion       TaxRuleVersion? @relation(fields: [ruleVersionId], references: [id], onDelete: SetNull)
+  ruleVersionNumber Int?
+  ruleKey           String?
+  whyApplies        String?
+
+  // True source links
+  sourceDocumentId        String?
+  sourceDocument          Document?   @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  originatingReviewItemId String?     @unique
+  originatingReviewItem   ReviewItem? @relation("ReviewItemCreatedObligation", fields: [originatingReviewItemId], references: [id], onDelete: SetNull)
+
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  deletedById    String?
+  deletedBy      User?     @relation("ObligationDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  deletionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -234,11 +532,20 @@ model ManualObligation {
   sourceRef       ObligationSourceRef?
   raciAssignments RaciAssignment[]
   auditEvents     AuditEvent[]
+  exceptions      Exception[]
+  evidenceItems   EvidenceItem[]
+  dataRequests    DataRequest[]
+  approvals       Approval[]
+  reminders       Reminder[]
+  documentLinks   DocumentRecordLink[]   @relation("DocumentRecordLinkObligation")
+  reviewLinks     ReviewItemRecordLink[] @relation("ReviewItemRecordLinkObligation")
 
+  @@unique([organisationId, entityId, occurrenceKey])
   @@index([organisationId])
   @@index([entityId])
   @@index([filingDeadline])
   @@index([overallWorkflowStatus])
+  @@map("ManualObligation")
 }
 
 // ── Live objects created from confirmed review items ───────────
@@ -297,15 +604,34 @@ model Action {
   sourceType              String?
   sourceDocumentReference String?
   sourcePageParagraph     String?
-  createdBy               String?
+  createdById             String?
+  createdBy               User?   @relation("ActionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  lastUpdatedById         String?
+  lastUpdatedBy           User?   @relation("ActionUpdatedBy", fields: [lastUpdatedById], references: [id], onDelete: SetNull)
   notes                   String?
 
-  archivedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  sourceDocumentId        String?
+  sourceDocument          Document?   @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  originatingReviewItemId String?     @unique
+  originatingReviewItem   ReviewItem? @relation("ReviewItemCreatedAction", fields: [originatingReviewItemId], references: [id], onDelete: SetNull)
+
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  deletedById    String?
+  deletedBy      User?     @relation("ActionDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  deletionReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   raciAssignments RaciAssignment[]
   auditEvents     AuditEvent[]
+  exceptions      Exception[]
+  evidenceItems   EvidenceItem[]
+  dataRequests    DataRequest[]
+  approvals       Approval[]
+  reminders       Reminder[]
+  documentLinks   DocumentRecordLink[]   @relation("DocumentRecordLinkAction")
+  reviewLinks     ReviewItemRecordLink[] @relation("ReviewItemRecordLinkAction")
 
   @@index([organisationId])
   @@index([entityId])
@@ -330,6 +656,7 @@ model Party {
   updatedAt DateTime @updatedAt
 
   raciAssignments RaciAssignment[]
+  dataRequests    DataRequest[]
 
   @@index([organisationId])
 }
@@ -340,31 +667,33 @@ model RaciAssignment {
   partyId String
   party   Party  @relation(fields: [partyId], references: [id], onDelete: Cascade)
 
-  manualObligationId String?
-  manualObligation   ManualObligation? @relation(fields: [manualObligationId], references: [id], onDelete: Cascade)
-  actionId           String?
-  action             Action?           @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  obligationId String?
+  obligation   Obligation? @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  actionId     String?
+  action       Action?     @relation(fields: [actionId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
-  @@index([manualObligationId])
+  @@index([obligationId])
   @@index([actionId])
   @@index([partyId])
 }
 
 model StatusHistory {
   id          String   @id @default(cuid())
-  objectType  String // ManualObligation | Action
+  objectType  String // Obligation | Action
   objectId    String
   statusField String // e.g. dataCompletenessStatus, overallWorkflowStatus, responsibleOwner, evidenceRequired...
   oldValue    String?
   newValue    String?
-  changedBy   String?
+  changedById String?
+  changedBy   User?    @relation("StatusHistoryChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
   changedAt   DateTime @default(now())
   reason      String?
 
   @@index([objectType, objectId])
   @@index([changedAt])
+  @@index([changedById])
 }
 
 model Assumption {
@@ -385,15 +714,63 @@ model Assumption {
   sourceType              String?
   sourceDocumentReference String?
   sourcePageParagraph     String?
-  createdBy               String?
+  createdById             String?
+  createdBy               User?   @relation("AssumptionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   notes                   String?
+
+  sourceDocumentId        String?
+  sourceDocument          Document?   @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  originatingReviewItemId String?     @unique
+  originatingReviewItem   ReviewItem? @relation("ReviewItemCreatedAssumption", fields: [originatingReviewItemId], references: [id], onDelete: SetNull)
 
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  exceptions    Exception[]
+  evidenceItems EvidenceItem[]
+  documentLinks DocumentRecordLink[]   @relation("DocumentRecordLinkAssumption")
+  reviewLinks   ReviewItemRecordLink[] @relation("ReviewItemRecordLinkAssumption")
+
   @@index([organisationId])
   @@index([entityId])
+  @@index([createdById])
+}
+
+model Caveat {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  caveatText         String
+  relatedTopic       String?
+  impactIfUnresolved String?
+  status             String  @default("Open") // Open | Resolved | Superseded | Archived
+  resolutionNote     String?
+
+  sourceDocumentId        String?
+  sourceDocument          Document?   @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  sourcePageParagraph     String?
+  originatingReviewItemId String?     @unique
+  originatingReviewItem   ReviewItem? @relation("ReviewItemCreatedCaveat", fields: [originatingReviewItemId], references: [id], onDelete: SetNull)
+  createdById             String?
+  createdBy               User?       @relation("CaveatCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  exceptions    Exception[]
+  evidenceItems EvidenceItem[]
+  documentLinks DocumentRecordLink[]   @relation("DocumentRecordLinkCaveat")
+  reviewLinks   ReviewItemRecordLink[] @relation("ReviewItemRecordLinkCaveat")
+
+  @@index([organisationId])
+  @@index([entityId])
+  @@index([status])
+  @@index([createdById])
 }
 
 model Tripwire {
@@ -414,15 +791,194 @@ model Tripwire {
   sourceType              String?
   sourceDocumentReference String?
   sourcePageParagraph     String?
-  createdBy               String?
+  createdById             String?
+  createdBy               User?   @relation("TripwireCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   notes                   String?
+
+  sourceDocumentId        String?
+  sourceDocument          Document?   @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  originatingReviewItemId String?     @unique
+  originatingReviewItem   ReviewItem? @relation("ReviewItemCreatedTripwire", fields: [originatingReviewItemId], references: [id], onDelete: SetNull)
 
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  exceptions    Exception[]
+  evidenceItems EvidenceItem[]
+  documentLinks DocumentRecordLink[]   @relation("DocumentRecordLinkTripwire")
+  reviewLinks   ReviewItemRecordLink[] @relation("ReviewItemRecordLinkTripwire")
+
   @@index([organisationId])
   @@index([entityId])
+  @@index([createdById])
+}
+
+model Exception {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId   String?
+  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  actionId       String?
+  action         Action?      @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  assumptionId   String?
+  assumption     Assumption?  @relation(fields: [assumptionId], references: [id], onDelete: SetNull)
+  caveatId       String?
+  caveat         Caveat?      @relation(fields: [caveatId], references: [id], onDelete: SetNull)
+  tripwireId     String?
+  tripwire       Tripwire?    @relation(fields: [tripwireId], references: [id], onDelete: SetNull)
+  documentId     String?
+  document       Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  title                String
+  reason               String
+  severity             String    @default("Medium")
+  status               String    @default("Open") // Open | In progress | Resolved | Accepted risk | Closed
+  blocksFiling         Boolean   @default(true)
+  ownerId              String?
+  owner                User?     @relation("ExceptionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  targetResolutionDate DateTime?
+  resolutionNote       String?
+  resolvedById         String?
+  resolvedBy           User?     @relation("ExceptionResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  evidenceItems EvidenceItem[]
+  documentLinks DocumentRecordLink[]   @relation("DocumentRecordLinkException")
+  reviewLinks   ReviewItemRecordLink[] @relation("ReviewItemRecordLinkException")
+
+  @@index([organisationId, status])
+  @@index([obligationId])
+  @@index([actionId])
+}
+
+model EvidenceItem {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId   String?
+  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  actionId       String?
+  action         Action?      @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  assumptionId   String?
+  assumption     Assumption?  @relation(fields: [assumptionId], references: [id], onDelete: SetNull)
+  caveatId       String?
+  caveat         Caveat?      @relation(fields: [caveatId], references: [id], onDelete: SetNull)
+  tripwireId     String?
+  tripwire       Tripwire?    @relation(fields: [tripwireId], references: [id], onDelete: SetNull)
+  exceptionId    String?
+  exception      Exception?   @relation(fields: [exceptionId], references: [id], onDelete: SetNull)
+  documentId     String?
+  document       Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  title            String
+  evidenceType     String?
+  description      String?
+  status           String    @default("Required") // Required | Requested | Received | Verified | Waived | Rejected
+  requiredBy       DateTime?
+  ownerId          String?
+  owner            User?     @relation("EvidenceOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  verifiedAt       DateTime?
+  verifiedById     String?
+  verifiedBy       User?     @relation("EvidenceVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verificationNote String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  documentLinks DocumentRecordLink[]   @relation("DocumentRecordLinkEvidence")
+  reviewLinks   ReviewItemRecordLink[] @relation("ReviewItemRecordLinkEvidence")
+
+  @@index([organisationId, status])
+  @@index([obligationId])
+  @@index([actionId])
+}
+
+model DataRequest {
+  id                      String       @id @default(cuid())
+  organisationId          String
+  organisation            Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId                String?
+  entity                  Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId            String?
+  obligation              Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  actionId                String?
+  action                  Action?      @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  requestedFromPartyId    String?
+  requestedFromParty      Party?       @relation(fields: [requestedFromPartyId], references: [id], onDelete: SetNull)
+  requestedFromDepartment String?
+  description             String
+  status                  String       @default("Open") // Draft | Open | Received | Validated | Cancelled
+  dueDate                 DateTime?
+  escalationDate          DateTime?
+  createdById             String
+  createdBy               User         @relation("DataRequestCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedToId            String?
+  assignedTo              User?        @relation("DataRequestAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  responseNote            String?
+  completedAt             DateTime?
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+  reminders               Reminder[]
+
+  @@index([organisationId, status, dueDate])
+}
+
+model Reminder {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  dataRequestId  String?
+  dataRequest    DataRequest? @relation(fields: [dataRequestId], references: [id], onDelete: SetNull)
+  obligationId   String?
+  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  actionId       String?
+  action         Action?      @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  ownerId        String?
+  owner          User?        @relation("ReminderOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  reminderType   String       @default("Reminder") // Reminder | Escalation
+  scheduledFor   DateTime
+  status         String       @default("Scheduled") // Scheduled | Due | Acknowledged | Cancelled
+  message        String
+  acknowledgedAt DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organisationId, status, scheduledFor])
+}
+
+model Approval {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  obligationId   String?
+  obligation     Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
+  actionId       String?
+  action         Action?      @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  gate           String // Technical review | Accountable approval | Filing release | Evidence waiver
+  status         String       @default("Pending") // Pending | Approved | Rejected | Cancelled | Superseded
+  requestedById  String
+  requestedBy    User         @relation("ApprovalRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  approverId     String
+  approver       User         @relation("ApprovalApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  decidedById    String?
+  decidedBy      User?        @relation("ApprovalDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  requestedAt    DateTime     @default(now())
+  decidedAt      DateTime?
+  decisionNote   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organisationId, status])
+  @@index([obligationId])
+  @@index([actionId])
 }
 
 // ── Document Vault ────────────────────────────────────────────
@@ -433,18 +989,18 @@ model Document {
   organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   entityId       String?
   entity         Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
-  obligationId   String?
   sourceSystemId String?
   sourceSystem   SourceSystem? @relation("DocumentSourceSystem", fields: [sourceSystemId], references: [id])
 
   // File metadata
-  filename    String
-  fileType    String // pdf | docx
-  fileSize    Int
-  contentHash String
-  storageKey  String
-  uploadedAt  DateTime @default(now())
-  uploadedBy  String?
+  filename     String
+  fileType     String // pdf | docx
+  fileSize     Int
+  contentHash  String
+  storageKey   String
+  uploadedAt   DateTime @default(now())
+  uploadedById String?
+  uploadedBy   User?    @relation("DocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   // Document classification
   documentType String
@@ -466,29 +1022,70 @@ model Document {
   accessNotes             String?
 
   // Source & reliance
-  isAuthoritativeSource  String  @default("Unknown") // Yes | No | Unknown
-  sourceConfidence       String  @default("Unknown") // High | Medium | Low | Unknown
-  supersedesDocumentId   String?
-  supersededByDocumentId String?
-  relianceStatus         String  @default("Draft") // Draft | Under review | Approved for reliance | Superseded | Do not rely
+  isAuthoritativeSource String    @default("Unknown") // Yes | No | Unknown
+  sourceConfidence      String    @default("Unknown") // High | Medium | Low | Unknown
+  versionNumber         Int       @default(1)
+  versionNotes          String?
+  supersedesDocumentId  String?   @unique
+  supersedes            Document? @relation("DocumentVersions", fields: [supersedesDocumentId], references: [id], onDelete: SetNull)
+  supersededBy          Document? @relation("DocumentVersions")
+  relianceStatus        String    @default("Draft") // Draft | Under review | Approved for reliance | Superseded | Do not rely
+  sourceVerifiedAt      DateTime?
+  sourceVerifiedById    String?
+  sourceVerifiedBy      User?     @relation("DocumentSourceVerifiedBy", fields: [sourceVerifiedById], references: [id], onDelete: SetNull)
 
   // Extraction
   extractionError String?
 
-  archivedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  deletedById    String?
+  deletedBy      User?     @relation("DocumentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  deletionReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  chunks         DocumentChunk[]
-  healthFlags    DocumentHealthFlag[]
-  extractionRuns ExtractionRun[]
-  reviewItems    ReviewItem[]
+  chunks            DocumentChunk[]
+  healthFlags       DocumentHealthFlag[]
+  extractionRuns    ExtractionRun[]
+  reviewItems       ReviewItem[]
+  accessGrants      DocumentAccess[]
+  obligations       Obligation[]
+  actions           Action[]
+  assumptions       Assumption[]
+  caveats           Caveat[]
+  tripwires         Tripwire[]
+  exceptions        Exception[]
+  evidenceItems     EvidenceItem[]
+  entityRelations   EntityRelation[]
+  accountingPeriods AccountingPeriod[]
+  recordLinks       DocumentRecordLink[]
 
   @@index([organisationId])
   @@index([entityId])
   @@index([documentType])
   @@index([status])
   @@index([uploadedAt])
+}
+
+model DocumentAccess {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  documentId     String
+  document       Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation("DocumentAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  permission     String       @default("view") // view | edit | review | manage
+  grantedAt      DateTime     @default(now())
+  grantedById    String?
+  grantedBy      User?        @relation("DocumentAccessGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  expiresAt      DateTime?
+  reason         String?
+
+  @@unique([documentId, userId])
+  @@index([organisationId])
+  @@index([userId])
 }
 
 model DocumentChunk {
@@ -518,10 +1115,11 @@ model DocumentHealthFlag {
 // ── AI Extraction ─────────────────────────────────────────────
 
 model ExtractionRun {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   documentId     String
-  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document       Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   modelProvider           String @default("openai")
   modelName               String @default("gpt-4o")
@@ -533,7 +1131,12 @@ model ExtractionRun {
   status               String    @default("Pending") // Pending | Running | Completed | Failed | Partially failed
   errorMessage         String?
   totalChunksProcessed Int       @default(0)
-  createdBy            String?
+  createdById          String?
+  createdBy            User?     @relation("ExtractionRunCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  attemptCount         Int       @default(0)
+  lockedAt             DateTime?
+  heartbeatAt          DateTime?
+  nextAttemptAt        DateTime  @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -585,7 +1188,8 @@ model ReviewItem {
 
   // Review workflow
   reviewStatus    String    @default("Needs review") // Needs review | In review | Confirmed | Edited and confirmed | Rejected | Duplicate | Not applicable | Needs adviser input | Needs source verification
-  reviewedBy      String?
+  reviewedById    String?
+  reviewedBy      User?     @relation("ReviewItemReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewedAt      DateTime?
   reviewerNotes   String?
   rejectionReason String?
@@ -593,16 +1197,105 @@ model ReviewItem {
   // Link to live object created from this item
   createdLiveObjectType String?
   createdLiveObjectId   String?
+  createdObligation     Obligation?            @relation("ReviewItemCreatedObligation")
+  createdAction         Action?                @relation("ReviewItemCreatedAction")
+  createdAssumption     Assumption?            @relation("ReviewItemCreatedAssumption")
+  createdCaveat         Caveat?                @relation("ReviewItemCreatedCaveat")
+  createdTripwire       Tripwire?              @relation("ReviewItemCreatedTripwire")
+  recordLinks           ReviewItemRecordLink[]
 
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  Organisation   Organisation? @relation(fields: [organisationId], references: [id])
-  organisationId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisationId String
 
   @@index([extractionRunId])
   @@index([documentId])
   @@index([itemType])
   @@index([reviewStatus])
+}
+
+/// Many-to-many provenance between a document and the live control records it
+/// supports. A database check constraint enforces exactly one target column.
+model DocumentRecordLink {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  documentId     String
+  document       Document     @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  linkType       String       @default("Source") // Source | Evidence | Corroborates | Contradicts
+  pageReference  String?
+  sourceExcerpt  String?
+  createdById    String?
+  createdBy      User?        @relation("DocumentRecordLinkCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  obligationId String?
+  obligation   Obligation?   @relation("DocumentRecordLinkObligation", fields: [obligationId], references: [id], onDelete: Restrict)
+  actionId     String?
+  action       Action?       @relation("DocumentRecordLinkAction", fields: [actionId], references: [id], onDelete: Restrict)
+  assumptionId String?
+  assumption   Assumption?   @relation("DocumentRecordLinkAssumption", fields: [assumptionId], references: [id], onDelete: Restrict)
+  caveatId     String?
+  caveat       Caveat?       @relation("DocumentRecordLinkCaveat", fields: [caveatId], references: [id], onDelete: Restrict)
+  tripwireId   String?
+  tripwire     Tripwire?     @relation("DocumentRecordLinkTripwire", fields: [tripwireId], references: [id], onDelete: Restrict)
+  exceptionId  String?
+  exception    Exception?    @relation("DocumentRecordLinkException", fields: [exceptionId], references: [id], onDelete: Restrict)
+  evidenceId   String?
+  evidence     EvidenceItem? @relation("DocumentRecordLinkEvidence", fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, obligationId, linkType])
+  @@unique([documentId, actionId, linkType])
+  @@unique([documentId, assumptionId, linkType])
+  @@unique([documentId, caveatId, linkType])
+  @@unique([documentId, tripwireId, linkType])
+  @@unique([documentId, exceptionId, linkType])
+  @@unique([documentId, evidenceId, linkType])
+  @@index([organisationId])
+  @@index([createdById])
+}
+
+/// Durable lineage for every extracted review item linked to a live record.
+/// Creation provenance remains on the live record; this table also supports
+/// later links, duplicates and multiple source items per record.
+model ReviewItemRecordLink {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  reviewItemId   String
+  reviewItem     ReviewItem   @relation(fields: [reviewItemId], references: [id], onDelete: Restrict)
+  relationType   String       @default("Linked") // Created | Linked | Duplicate
+  createdById    String?
+  createdBy      User?        @relation("ReviewItemRecordLinkCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  obligationId String?
+  obligation   Obligation?   @relation("ReviewItemRecordLinkObligation", fields: [obligationId], references: [id], onDelete: Restrict)
+  actionId     String?
+  action       Action?       @relation("ReviewItemRecordLinkAction", fields: [actionId], references: [id], onDelete: Restrict)
+  assumptionId String?
+  assumption   Assumption?   @relation("ReviewItemRecordLinkAssumption", fields: [assumptionId], references: [id], onDelete: Restrict)
+  caveatId     String?
+  caveat       Caveat?       @relation("ReviewItemRecordLinkCaveat", fields: [caveatId], references: [id], onDelete: Restrict)
+  tripwireId   String?
+  tripwire     Tripwire?     @relation("ReviewItemRecordLinkTripwire", fields: [tripwireId], references: [id], onDelete: Restrict)
+  exceptionId  String?
+  exception    Exception?    @relation("ReviewItemRecordLinkException", fields: [exceptionId], references: [id], onDelete: Restrict)
+  evidenceId   String?
+  evidence     EvidenceItem? @relation("ReviewItemRecordLinkEvidence", fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@unique([reviewItemId, obligationId, relationType])
+  @@unique([reviewItemId, actionId, relationType])
+  @@unique([reviewItemId, assumptionId, relationType])
+  @@unique([reviewItemId, caveatId, relationType])
+  @@unique([reviewItemId, tripwireId, relationType])
+  @@unique([reviewItemId, exceptionId, relationType])
+  @@unique([reviewItemId, evidenceId, relationType])
+  @@index([organisationId])
+  @@index([createdById])
 }
 
 // ── Source Systems ────────────────────────────────────────────
@@ -635,6 +1328,7 @@ model SourceSystem {
   obligationSourceRefs    ObligationSourceRef[]
   documents               Document[]            @relation("DocumentSourceSystem")
   suggestedForReviewItems ReviewItem[]
+  taxRegistrations        TaxRegistration[]
 
   @@index([organisationId])
 }
@@ -666,7 +1360,8 @@ model SourcePriorityRule {
   tertiarySource    SourceSystem? @relation("TertiarySource", fields: [tertiarySourceId], references: [id])
 
   conflictHandling String?
-  reviewOwner      String?
+  reviewOwnerId    String?
+  reviewOwner      User?   @relation("PriorityRuleReviewOwner", fields: [reviewOwnerId], references: [id], onDelete: SetNull)
   reviewFrequency  String?
   notes            String?
 
@@ -675,6 +1370,7 @@ model SourcePriorityRule {
 
   @@unique([organisationId, dataCategoryId])
   @@index([organisationId])
+  @@index([reviewOwnerId])
 }
 
 model SourceConflict {
@@ -697,7 +1393,8 @@ model SourceConflict {
   sourceBValue String
 
   severity             String?
-  reviewOwner          String?
+  reviewOwnerId        String?
+  reviewOwner          User?     @relation("SourceConflictReviewOwner", fields: [reviewOwnerId], references: [id], onDelete: SetNull)
   requiredConfirmation String?
   status               String    @default("Open")
   resolution           String?
@@ -711,12 +1408,13 @@ model SourceConflict {
   @@index([organisationId])
   @@index([dataCategoryId])
   @@index([status])
+  @@index([reviewOwnerId])
 }
 
 model ObligationSourceRef {
-  id           String           @id @default(cuid())
-  obligationId String           @unique
-  obligation   ManualObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  obligationId String     @unique
+  obligation   Obligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
 
   sourceSystemId String?
   sourceSystem   SourceSystem? @relation(fields: [sourceSystemId], references: [id])
@@ -737,27 +1435,33 @@ model ObligationSourceRef {
 }
 
 model AuditEvent {
-  id                 String            @id @default(cuid())
+  id                 String       @id @default(cuid())
   organisationId     String
-  organisation       Organisation      @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisation       Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   userId             String?
-  user               User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user               User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   entityId           String?
-  entity             Entity?           @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  entity             Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
   obligationId       String?
-  obligation         Obligation?       @relation(fields: [obligationId], references: [id], onDelete: SetNull)
-  manualObligationId String?
-  manualObligation   ManualObligation? @relation(fields: [manualObligationId], references: [id], onDelete: SetNull)
+  obligation         Obligation?  @relation(fields: [obligationId], references: [id], onDelete: SetNull)
   actionId           String?
-  actionRecord       Action?           @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  actionRecord       Action?      @relation(fields: [actionId], references: [id], onDelete: SetNull)
   action             String
   detail             String?
-  createdAt          DateTime          @default(now())
+  objectType         String?
+  objectId           String?
+  beforeJson         Json?
+  afterJson          Json?
+  reason             String?
+  correlationId      String?
+  actorNameSnapshot  String?
+  actorEmailSnapshot String?
+  createdAt          DateTime     @default(now())
 
   @@index([organisationId])
   @@index([entityId])
   @@index([userId])
   @@index([createdAt])
-  @@index([manualObligationId])
+  @@index([objectType, objectId])
   @@index([actionId])
 }

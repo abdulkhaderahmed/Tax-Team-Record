@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireOrg } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
+import type { Prisma } from "@prisma/client";
 import { ITEM_TYPE_LABELS, type ItemType } from "@/lib/extraction-schema";
 import { updateReviewStatus } from "@/app/actions/extraction";
 
@@ -29,14 +31,15 @@ export default async function ReviewQueuePage({
 }: {
   searchParams: Promise<{ status?: string; type?: string }>;
 }) {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
+  const context = await requirePermission("review:perform");
+  const orgId = context.orgId;
   const sp = await searchParams;
   const status = sp.status;
   const type = sp.type;
 
-  const where = {
+  const where: Prisma.ReviewItemWhereInput = {
     organisationId: orgId,
+    document: documentAccessWhere(context, "review"),
     reviewStatus: status ? status : { in: OPEN_REVIEW_STATUSES },
     ...(type ? { itemType: type } : {}),
   };
@@ -54,7 +57,7 @@ export default async function ReviewQueuePage({
     }),
     prisma.reviewItem.groupBy({
       by: ["reviewStatus"],
-      where: { organisationId: orgId, reviewStatus: { in: OPEN_REVIEW_STATUSES } },
+      where: { organisationId: orgId, document: documentAccessWhere(context, "review"), reviewStatus: { in: OPEN_REVIEW_STATUSES } },
       _count: { _all: true },
     }),
   ]);
@@ -114,8 +117,6 @@ export default async function ReviewQueuePage({
             <tbody>
               {items.map((item) => {
                 const markInReview = updateReviewStatus.bind(null, item.id, "In review", undefined, undefined);
-                const markDuplicate = updateReviewStatus.bind(null, item.id, "Duplicate", undefined, undefined);
-                const markNotApplicable = updateReviewStatus.bind(null, item.id, "Not applicable", undefined, undefined);
                 return (
                   <tr key={item.id}>
                     <td>
@@ -143,8 +144,7 @@ export default async function ReviewQueuePage({
                         {item.reviewStatus === "Needs review" && (
                           <form action={markInReview}><button className="btn btn-secondary btn-sm" type="submit">In review</button></form>
                         )}
-                        <form action={markDuplicate}><button className="btn btn-secondary btn-sm" type="submit">Duplicate</button></form>
-                        <form action={markNotApplicable}><button className="btn btn-secondary btn-sm" type="submit">N/A</button></form>
+                        <span className="text-muted text-sm">Final dispositions require a reason in the document review.</span>
                       </div>
                     </td>
                   </tr>

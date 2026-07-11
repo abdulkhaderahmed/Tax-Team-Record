@@ -9,12 +9,17 @@ export default async function NewConflictPage() {
   const { organisation: org } = await requireOrg();
   const orgId = org.id;
 
-  const [categories, entities, sourceSystems] = await Promise.all([
+  const [categories, entities, sourceSystems, users] = await Promise.all([
     prisma.dataCategory.findMany({ orderBy: { displayOrder: "asc" } }),
     prisma.entity.findMany({ where: { organisationId: orgId }, orderBy: { legalName: "asc" } }),
     prisma.sourceSystem.findMany({
       where: { organisationId: orgId, status: { not: "Archived" } },
       orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { organisationId: orgId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true },
     }),
   ]);
 
@@ -117,7 +122,12 @@ export default async function NewConflictPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div className="form-row">
                 <label className="form-label">Review owner</label>
-                <input name="reviewOwner" className="form-input" placeholder="e.g. Alex Smith" />
+                <select name="reviewOwnerId" className="form-input" defaultValue="">
+                  <option value="">— unassigned —</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>{user.name} · {user.email} · {user.id}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-row">
                 <label className="form-label">Required confirmation party</label>

@@ -4,21 +4,26 @@ import {
   DOCUMENT_TYPES,
   SENSITIVITY_LEVELS,
   PRIVILEGE_STATUSES,
-  RELIANCE_STATUSES,
-  SOURCE_CONFIDENCE_LEVELS,
   YES_NO_UNKNOWN,
 } from "@/lib/doc-constants";
 import Link from "next/link";
 import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
 
 
 export default async function UploadDocumentPage() {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
+  const context = await requireOrg();
+  const orgId = context.orgId;
 
-  const [entities, sourceSystems] = await Promise.all([
-    prisma.entity.findMany({ where: { organisationId: orgId }, orderBy: { legalName: "asc" } }),
+  const [entities, sourceSystems, priorDocuments] = await Promise.all([
+    prisma.entity.findMany({ where: { organisationId: orgId, deletedAt: null }, orderBy: { legalName: "asc" } }),
     prisma.sourceSystem.findMany({ where: { organisationId: orgId, status: { not: "Archived" } }, orderBy: { name: "asc" } }),
+    prisma.document.findMany({
+      where: { AND: [documentAccessWhere(context, "edit"), { deletedAt: null }] },
+      orderBy: { uploadedAt: "desc" },
+      select: { id: true, filename: true, versionNumber: true },
+      take: 100,
+    }),
   ]);
 
   return (
@@ -42,8 +47,9 @@ export default async function UploadDocumentPage() {
                 style={{ display: "block", padding: "6px 0", fontSize: 14 }} />
             </div>
             <div className="form-row" style={{ marginBottom: 0 }}>
-              <label className="form-label">Uploaded by</label>
-              <input name="uploadedBy" className="form-input" defaultValue="Alex Smith" />
+              <div className="form-hint">
+                Uploaded by is recorded automatically as authenticated user {context.user.id}.
+              </div>
             </div>
           </div>
 
@@ -77,6 +83,21 @@ export default async function UploadDocumentPage() {
               <div className="form-row">
                 <label className="form-label">Version label</label>
                 <input name="versionLabel" className="form-input" placeholder="e.g. Final, Draft v2" />
+              </div>
+              <div className="form-row">
+                <label className="form-label">Supersedes document</label>
+                <select name="supersedesDocumentId" className="form-input">
+                  <option value="">— first version —</option>
+                  {priorDocuments.map((document) => (
+                    <option key={document.id} value={document.id}>
+                      {document.filename} · record v{document.versionNumber}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <label className="form-label">Version notes</label>
+                <input name="versionNotes" className="form-input" placeholder="What changed in this version" />
               </div>
               <div className="form-row">
                 <label className="form-label">Related entity</label>
@@ -144,29 +165,8 @@ export default async function UploadDocumentPage() {
             </div>
           </div>
 
-          {/* Reliance */}
-          <div className="panel" style={{ marginBottom: 24 }}>
-            <h2>Source &amp; reliance</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-              <div className="form-row">
-                <label className="form-label">Reliance status</label>
-                <select name="relianceStatus" className="form-input" defaultValue="Draft">
-                  {RELIANCE_STATUSES.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Is authoritative source?</label>
-                <select name="isAuthoritativeSource" className="form-input" defaultValue="Unknown">
-                  {YES_NO_UNKNOWN.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Source confidence</label>
-                <select name="sourceConfidence" className="form-input" defaultValue="Unknown">
-                  {SOURCE_CONFIDENCE_LEVELS.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-            </div>
+          <div className="alert alert-info" style={{ marginBottom: 24 }}>
+            New uploads always start as Draft with unknown source authority. A different user with document-review permission must approve reliance or authority.
           </div>
 
           <div style={{ display: "flex", gap: 12 }}>

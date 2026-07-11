@@ -1,17 +1,24 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { createManualObligation } from "@/app/actions/manualObligations";
-import { ManualObligationForm } from "../_components/ManualObligationForm";
+import { createObligation } from "@/app/actions/obligations";
+import { ObligationForm } from "../_components/ObligationForm";
+import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
 
 export default async function NewObligationPage() {
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({
-        where: { organisationId: org.id },
-        orderBy: { legalName: "asc" },
-        select: { id: true, legalName: true },
-      })
-    : [];
+  const context = await requireOrg();
+  const [entities, documents] = await Promise.all([
+    prisma.entity.findMany({
+      where: { organisationId: context.orgId, deletedAt: null },
+      orderBy: { legalName: "asc" },
+      select: { id: true, legalName: true },
+    }),
+    prisma.document.findMany({
+      where: documentAccessWhere(context, "view"),
+      orderBy: { uploadedAt: "desc" },
+      select: { id: true, filename: true, versionNumber: true },
+    }),
+  ]);
 
   return (
     <>
@@ -25,11 +32,13 @@ export default async function NewObligationPage() {
         </div>
       </div>
 
-      <ManualObligationForm
-        action={createManualObligation}
+      <ObligationForm
+        action={createObligation}
         entities={entities}
+        documents={documents}
         cancelHref="/obligations"
         submitLabel="Create Obligation"
+        isNew
       />
     </>
   );

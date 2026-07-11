@@ -7,10 +7,18 @@
     "build": "next build",
     "start": "next start --port ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/rules/*.test.ts src/lib/*.test.ts eval/extraction-benchmark/*.test.ts",
+    "test:rules": "tsx --test tests/rules/*.test.ts",
+    "test:controls": "tsx --test src/lib/authz-policy.test.ts src/lib/audit.test.ts src/lib/clerk-config.test.ts src/lib/control-register-policy.test.ts src/lib/record-control-policy.test.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "storage:backfill": "tsx scripts/backfill-local-documents.ts"
+    "db:migrate": "prisma migrate deploy",
+    "storage:backfill": "tsx scripts/backfill-local-documents.ts",
+    "worker:extraction": "tsx scripts/run-extraction-worker.ts",
+    "test:extraction": "tsx --test src/lib/extraction-pipeline.test.ts eval/extraction-benchmark/*.test.ts",
+    "eval:extraction-manifest": "tsx eval/extraction-benchmark/verify-manifest.ts",
+    "eval:extraction": "tsx eval/extraction-benchmark/evaluate.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.13",

@@ -1,79 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { CONTROLLED_RULE_DEFINITIONS } from "../src/lib/controlled-rule-definitions";
 
 const prisma = new PrismaClient();
-
-const rules = [
-  {
-    ruleKey: "CT600_FILING",
-    name: "CT600 Filing",
-    description:
-      "Corporation Tax Return — due 12 months after the end of the accounting period",
-    appliesTo: "ALL",
-  },
-  {
-    ruleKey: "CT_PAYMENT_STANDARD",
-    name: "Corporation Tax Payment",
-    description:
-      "Corporation Tax payment — due 9 months and 1 day after the end of the accounting period (standard and large companies)",
-    appliesTo: "STANDARD_AND_LARGE",
-  },
-  {
-    ruleKey: "CT_QIP_1",
-    name: "Corporation Tax QIP 1 of 4",
-    description:
-      "Quarterly Instalment Payment 1 — due on 14th day of 7th month of accounting period (very large companies only)",
-    appliesTo: "VERY_LARGE",
-  },
-  {
-    ruleKey: "CT_QIP_2",
-    name: "Corporation Tax QIP 2 of 4",
-    description:
-      "Quarterly Instalment Payment 2 — due on 14th day of 10th month of accounting period (very large companies only)",
-    appliesTo: "VERY_LARGE",
-  },
-  {
-    ruleKey: "CT_QIP_3",
-    name: "Corporation Tax QIP 3 of 4",
-    description:
-      "Quarterly Instalment Payment 3 — due on 14th day of 1st month after accounting period end (very large companies only)",
-    appliesTo: "VERY_LARGE",
-  },
-  {
-    ruleKey: "CT_QIP_4",
-    name: "Corporation Tax QIP 4 of 4",
-    description:
-      "Quarterly Instalment Payment 4 — due on 14th day of 4th month after accounting period end (very large companies only)",
-    appliesTo: "VERY_LARGE",
-  },
-  {
-    ruleKey: "VAT_QUARTERLY_RETURN",
-    name: "VAT Quarterly Return",
-    description:
-      "VAT Return and payment — due 1 month and 7 days after the end of each VAT quarter",
-    appliesTo: "VAT_REGISTERED",
-  },
-  {
-    ruleKey: "P11D",
-    name: "P11D Expenses & Benefits",
-    description:
-      "P11D form — due 6 July following the end of the tax year",
-    appliesTo: "EMPLOYER",
-  },
-  {
-    ruleKey: "P11D_B",
-    name: "P11D(b) Class 1A NIC Return",
-    description:
-      "P11D(b) form and Class 1A NIC payment — due 6 July following the end of the tax year",
-    appliesTo: "EMPLOYER",
-  },
-  {
-    ruleKey: "ERS_ANNUAL_RETURN",
-    name: "ERS Annual Return",
-    description:
-      "Employment-Related Securities annual return — due 6 July following the end of the tax year",
-    appliesTo: "ERS",
-  },
-];
 
 const dataCategories = [
   "Legal entity name",
@@ -114,17 +42,6 @@ const dataCategories = [
 ];
 
 async function main() {
-  // ── Obligation rules ─────────────────────────────────────────
-  console.log("Seeding obligation rules...");
-  for (const rule of rules) {
-    await prisma.obligationRule.upsert({
-      where: { ruleKey: rule.ruleKey },
-      update: rule,
-      create: rule,
-    });
-  }
-  console.log(`Seeded ${rules.length} obligation rules`);
-
   // ── Data categories (global, no org) ────────────────────────
   console.log("Seeding data categories...");
   for (let i = 0; i < dataCategories.length; i++) {
@@ -144,24 +61,101 @@ async function main() {
     create: { id: "demo-org", name: "Acme Tax Ltd" },
   });
 
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: "alex@acmetax.co.uk" },
-    update: { name: "Alex Smith", role: "admin", organisationId: org.id },
+    update: { name: "Demo Administrator", role: "admin", organisationId: org.id },
     create: {
-      name: "Alex Smith",
+      id: "demo-admin-user",
+      name: "Demo Administrator",
       email: "alex@acmetax.co.uk",
       role: "admin",
       organisationId: org.id,
     },
   });
 
+  const reviewerUser = await prisma.user.upsert({
+    where: { email: "reviewer@acmetax.co.uk" },
+    update: { name: "Demo Reviewer", role: "reviewer", organisationId: org.id },
+    create: {
+      id: "demo-reviewer-user",
+      name: "Demo Reviewer",
+      email: "reviewer@acmetax.co.uk",
+      role: "reviewer",
+      organisationId: org.id,
+    },
+  });
+
+  // ── Controlled rule content ─────────────────────────────────
+  console.log("Seeding controlled rule versions...");
+  for (const definition of CONTROLLED_RULE_DEFINITIONS) {
+    const { ruleKey, regime, triggerConfig, citations = [], ...versionDefinition } = definition;
+    const rule = await prisma.taxRule.upsert({
+      where: {
+        organisationId_ruleKey: {
+          organisationId: org.id,
+          ruleKey,
+        },
+      },
+      // Controlled records are immutable once present. Changes go through the
+      // proposal/review workflow and create a successor version.
+      update: {},
+      create: {
+        organisationId: org.id,
+        ruleKey,
+        regime,
+      },
+    });
+
+    const existingVersion = await prisma.taxRuleVersion.findUnique({
+      where: { ruleId_version: { ruleId: rule.id, version: 1 } },
+    });
+    if (existingVersion) continue;
+
+    const version = await prisma.taxRuleVersion.create({
+      data: {
+        ...versionDefinition,
+        ruleId: rule.id,
+        triggerConfig: triggerConfig as Prisma.InputJsonValue,
+        version: 1,
+        effectiveFrom: new Date(definition.effectiveFrom),
+        sourceLastCheckedAt: new Date(definition.sourceLastCheckedAt),
+        status: "Approved",
+        createdById: adminUser.id,
+        reviewedById: reviewerUser.id,
+        reviewedAt: new Date("2026-07-11T00:00:00.000Z"),
+      },
+    });
+    await prisma.ruleCitation.create({
+      data: {
+        ruleVersionId: version.id,
+        title: version.statutoryBasis,
+        url: version.statutoryUrl,
+        authorityLevel: version.authorityLevel,
+        checkedAt: version.sourceLastCheckedAt,
+      },
+    });
+    for (const citation of citations) {
+      await prisma.ruleCitation.create({
+        data: {
+          ruleVersionId: version.id,
+          title: citation.title,
+          url: citation.url,
+          authorityLevel: citation.authorityLevel,
+          locator: citation.locator,
+          checkedAt: version.sourceLastCheckedAt,
+        },
+      });
+    }
+  }
+  console.log(`Seeded ${CONTROLLED_RULE_DEFINITIONS.length} controlled rules`);
+
   console.log(`Demo org: ${org.name}`);
-  console.log("Demo user: alex@acmetax.co.uk (admin)");
+  console.log("Demo users: alex@acmetax.co.uk (admin), reviewer@acmetax.co.uk (reviewer)");
 
   // ── Demo entity ──────────────────────────────────────────────
   const entity = await prisma.entity.upsert({
     where: { id: "demo-entity-1" },
-    update: {},
+    update: { primaryTaxOwner: adminUser.id },
     create: {
       id: "demo-entity-1",
       organisationId: org.id,
@@ -191,7 +185,7 @@ async function main() {
       saoInScope: false,
       publishedTaxStrategyInScope: false,
       hasPillar2: false,
-      primaryTaxOwner: "Alex Smith",
+      primaryTaxOwner: adminUser.id,
       externalAdviser: "Big4 LLP",
     },
   });
@@ -206,7 +200,7 @@ async function main() {
       name: "HMRC Online Services",
       systemType: "HMRC portal",
       description: "HMRC's online portal for CT returns, VAT submissions, PAYE and employer filings",
-      owner: "Alex Smith",
+      owner: "Demo Administrator",
       department: "Tax",
       externalProvider: "HMRC",
       accessMethod: "Manual entry",
@@ -220,7 +214,7 @@ async function main() {
       name: "Companies House",
       systemType: "Companies House",
       description: "Public register for legal entity data, filing history, and accounts",
-      owner: "Alex Smith",
+      owner: "Demo Administrator",
       department: "Tax",
       externalProvider: "Companies House",
       accessMethod: "Read-only document",
@@ -276,7 +270,7 @@ async function main() {
       name: "Big4 LLP Document Portal",
       systemType: "Adviser documents",
       description: "External adviser technical memos, advice letters, valuation reports, and R&D claim schedules",
-      owner: "Alex Smith",
+      owner: "Demo Administrator",
       department: "Tax",
       externalProvider: "Big4 LLP",
       accessMethod: "External adviser provided",
@@ -290,7 +284,7 @@ async function main() {
       name: "Tax Team Spreadsheets",
       systemType: "Spreadsheet",
       description: "Working papers, obligation trackers, and ad hoc calculation spreadsheets held on SharePoint",
-      owner: "Alex Smith",
+      owner: "Demo Administrator",
       department: "Tax",
       externalProvider: null,
       accessMethod: "Manual entry",
@@ -336,7 +330,7 @@ async function main() {
     secondarySourceId?: string;
     tertiarySourceId?: string;
     conflictHandling: string;
-    reviewOwner?: string;
+    reviewOwnerId?: string;
     reviewFrequency?: string;
     notes?: string;
   }> = [
@@ -345,21 +339,21 @@ async function main() {
       authSourceId: "ss-companies-house",
       secondarySourceId: "ss-adviser-docs",
       conflictHandling: "Authoritative source wins",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
       dataCategoryName: "Company registration number",
       authSourceId: "ss-companies-house",
       conflictHandling: "Authoritative source wins",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
       dataCategoryName: "Corporation Tax UTR",
       authSourceId: "ss-hmrc-portal",
       conflictHandling: "Authoritative source wins",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -367,7 +361,7 @@ async function main() {
       authSourceId: "ss-erp",
       secondarySourceId: "ss-adviser-docs",
       conflictHandling: "Manual review required",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
       notes: "ERP is authoritative for accounting period boundaries; adviser documents should agree.",
     },
@@ -376,7 +370,7 @@ async function main() {
       authSourceId: "ss-hmrc-portal",
       secondarySourceId: "ss-spreadsheets",
       conflictHandling: "Authoritative source wins",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -384,7 +378,7 @@ async function main() {
       authSourceId: "ss-payroll",
       secondarySourceId: "ss-hr",
       conflictHandling: "Payroll confirmation required",
-      reviewOwner: "Payroll Manager",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Monthly",
     },
     {
@@ -392,7 +386,7 @@ async function main() {
       authSourceId: "ss-hr",
       secondarySourceId: "ss-payroll",
       conflictHandling: "Manual review required",
-      reviewOwner: "HR Director",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -400,7 +394,7 @@ async function main() {
       authSourceId: "ss-hr",
       secondarySourceId: "ss-adviser-docs",
       conflictHandling: "Adviser confirmation required",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
       notes: "Global mobility adviser should confirm complex residency positions.",
     },
@@ -409,7 +403,7 @@ async function main() {
       authSourceId: "ss-spreadsheets",
       secondarySourceId: "ss-adviser-docs",
       conflictHandling: "Adviser confirmation required",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -417,7 +411,7 @@ async function main() {
       authSourceId: "ss-erp",
       secondarySourceId: "ss-adviser-docs",
       conflictHandling: "Adviser confirmation required",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
       notes: "ERP is authoritative for expenditure amounts; adviser claim schedule must reconcile.",
     },
@@ -425,7 +419,7 @@ async function main() {
       dataCategoryName: "R&D technical evidence",
       authSourceId: "ss-adviser-docs",
       conflictHandling: "Tax owner approval required",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -433,7 +427,7 @@ async function main() {
       authSourceId: "ss-far",
       secondarySourceId: "ss-erp",
       conflictHandling: "Finance confirmation required",
-      reviewOwner: "Finance Director",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Quarterly",
     },
     {
@@ -441,7 +435,7 @@ async function main() {
       authSourceId: "ss-erp",
       secondarySourceId: "ss-far",
       conflictHandling: "Finance confirmation required",
-      reviewOwner: "Finance Director",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Quarterly",
     },
     {
@@ -449,7 +443,7 @@ async function main() {
       authSourceId: "ss-hr",
       secondarySourceId: "ss-payroll",
       conflictHandling: "Payroll confirmation required",
-      reviewOwner: "Payroll Manager",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -457,7 +451,7 @@ async function main() {
       authSourceId: "ss-payroll",
       secondarySourceId: "ss-hr",
       conflictHandling: "Manual review required",
-      reviewOwner: "Payroll Manager",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Annually",
     },
     {
@@ -465,7 +459,7 @@ async function main() {
       authSourceId: "ss-hmrc-portal",
       secondarySourceId: "ss-spreadsheets",
       conflictHandling: "Authoritative source wins",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Per filing",
       notes: "HMRC portal receipt is always the authoritative confirmation of submission.",
     },
@@ -473,14 +467,14 @@ async function main() {
       dataCategoryName: "Payment evidence",
       authSourceId: "ss-erp",
       conflictHandling: "Finance confirmation required",
-      reviewOwner: "Finance Director",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Per payment",
     },
     {
       dataCategoryName: "Adviser technical advice",
       authSourceId: "ss-adviser-docs",
       conflictHandling: "Tax owner approval required",
-      reviewOwner: "Alex Smith",
+      reviewOwnerId: adminUser.id,
       reviewFrequency: "Per engagement",
       notes: "Adviser documents are authoritative for advice conclusions but not necessarily for the underlying facts.",
     },
@@ -491,7 +485,15 @@ async function main() {
     if (!catId) continue;
     await prisma.sourcePriorityRule.upsert({
       where: { organisationId_dataCategoryId: { organisationId: org.id, dataCategoryId: catId } },
-      update: {},
+      update: {
+        authSourceId: rule.authSourceId,
+        secondarySourceId: rule.secondarySourceId,
+        tertiarySourceId: rule.tertiarySourceId,
+        conflictHandling: rule.conflictHandling,
+        reviewOwnerId: rule.reviewOwnerId,
+        reviewFrequency: rule.reviewFrequency,
+        notes: rule.notes,
+      },
       create: {
         organisationId: org.id,
         dataCategoryId: catId,
@@ -499,7 +501,7 @@ async function main() {
         secondarySourceId: rule.secondarySourceId,
         tertiarySourceId: rule.tertiarySourceId,
         conflictHandling: rule.conflictHandling,
-        reviewOwner: rule.reviewOwner,
+        reviewOwnerId: rule.reviewOwnerId,
         reviewFrequency: rule.reviewFrequency,
         notes: rule.notes,
       },

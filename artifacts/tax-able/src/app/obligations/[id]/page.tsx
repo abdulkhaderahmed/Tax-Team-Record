@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { fmtDate } from "@/lib/obligations";
 import {
-  archiveManualObligation,
-  unarchiveManualObligation,
-  deleteManualObligation,
-} from "@/app/actions/manualObligations";
+  archiveObligation,
+  unarchiveObligation,
+  deleteObligation,
+} from "@/app/actions/obligations";
 import { OwnershipAndControls } from "@/components/ownership-controls";
+import { requireOrg } from "@/lib/auth";
+import { canUseDocumentPermission } from "@/lib/authz-policy";
+import { redactAuditEventForRestrictedDocuments } from "@/lib/audit";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -24,21 +27,96 @@ export default async function ObligationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const context = await requireOrg();
+  const orgId = context.orgId;
+  const now = new Date();
 
-  const [ob, raciAssignments, statusHistory] = await Promise.all([
-    prisma.manualObligation.findUnique({
-      where: { id },
-      include: { entity: { select: { id: true, legalName: true } } },
+  const [ob, raciAssignments, statusHistory, auditEvents] = await Promise.all([
+    prisma.obligation.findFirst({
+      where: { id, organisationId: orgId, deletedAt: null },
+      include: {
+        entity: { select: { id: true, legalName: true } },
+        createdBy: { select: { id: true, name: true, email: true } },
+        lastUpdatedBy: { select: { id: true, name: true, email: true } },
+        ruleVersion: { include: { rule: true, citations: true } },
+        sourceDocument: {
+          select: {
+            id: true,
+            organisationId: true,
+            filename: true,
+            versionNumber: true,
+            restrictedAccess: true,
+            deletedAt: true,
+            accessGrants: { where: { organisationId: context.orgId, userId: context.userId, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }, select: { permission: true }, take: 1 },
+          },
+        },
+        documentLinks: {
+          include: {
+            document: {
+              select: {
+                id: true,
+                organisationId: true,
+                filename: true,
+                versionNumber: true,
+                restrictedAccess: true,
+                deletedAt: true,
+                accessGrants: { where: { organisationId: context.orgId, userId: context.userId, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }, select: { permission: true }, take: 1 },
+              },
+            },
+            createdBy: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        exceptions: { where: { status: { in: ["Open", "In progress"] } }, orderBy: { createdAt: "desc" } },
+        evidenceItems: { orderBy: { createdAt: "desc" } },
+        approvals: { orderBy: { requestedAt: "desc" }, include: { approver: { select: { name: true } } } },
+      },
     }),
-    prisma.raciAssignment.findMany({ where: { manualObligationId: id }, include: { party: true } }),
-    prisma.statusHistory.findMany({ where: { objectType: "ManualObligation", objectId: id }, orderBy: { changedAt: "desc" }, take: 50 }),
+    prisma.raciAssignment.findMany({ where: { obligationId: id }, include: { party: true } }),
+    prisma.statusHistory.findMany({ where: { objectType: "Obligation", objectId: id }, include: { changedBy: { select: { id: true, name: true } } }, orderBy: { changedAt: "desc" }, take: 50 }),
+    prisma.auditEvent.findMany({
+      where: { organisationId: orgId, objectType: "Obligation", objectId: id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { user: { select: { name: true, email: true } } },
+    }),
   ]);
 
   if (!ob) notFound();
 
-  const archiveAction = archiveManualObligation.bind(null, id);
-  const unarchiveAction = unarchiveManualObligation.bind(null, id);
-  const deleteAction = deleteManualObligation.bind(null, id);
+  const canViewDocument = (document: {
+    organisationId: string;
+    restrictedAccess: boolean;
+    deletedAt: Date | null;
+    accessGrants: { permission: string }[];
+  }) =>
+    document.organisationId === context.orgId &&
+    document.deletedAt == null &&
+    canUseDocumentPermission(
+      context.user.role,
+      document.restrictedAccess,
+      document.accessGrants[0]?.permission,
+      "view",
+    );
+  const primarySourceVisible = ob.sourceDocument
+    ? canViewDocument(ob.sourceDocument)
+    : false;
+  const visibleDocumentLinks = ob.documentLinks.filter((link) =>
+    canViewDocument(link.document),
+  );
+  const inaccessibleDocuments = [
+    ...(ob.sourceDocument && !primarySourceVisible ? [ob.sourceDocument] : []),
+    ...ob.documentLinks
+      .filter((link) => !canViewDocument(link.document))
+      .map((link) => link.document),
+  ].map(({ id: documentId, filename }) => ({ id: documentId, filename }));
+  const visibleAuditEvents = auditEvents.map((event) =>
+    redactAuditEventForRestrictedDocuments(event, inaccessibleDocuments),
+  );
+
+  const archiveAction = archiveObligation.bind(null, id);
+  const unarchiveAction = unarchiveObligation.bind(null, id);
+  const deleteAction = deleteObligation.bind(null, id);
 
   return (
     <>
@@ -77,7 +155,7 @@ export default async function ObligationDetailPage({
       )}
 
       <OwnershipAndControls
-        objectType="ManualObligation"
+        objectType="Obligation"
         objectId={ob.id}
         returnPath={`/obligations/${ob.id}`}
         responsibleOwner={ob.responsibleOwner}
@@ -110,6 +188,50 @@ export default async function ObligationDetailPage({
         raciAssignments={raciAssignments}
         statusHistory={statusHistory}
       />
+
+      {ob.ruleVersion && (
+        <div className="panel">
+          <h2>Why this applies</h2>
+          <p style={{ whiteSpace: "pre-wrap" }}>{ob.whyApplies ?? ob.humanExplanation ?? "No evaluation trace was stored."}</p>
+          <div className="detail-grid">
+            <Row label="Controlled rule" value={`${ob.ruleVersion.rule.ruleKey} · version ${ob.ruleVersion.version}`} />
+            <Row label="Rule status" value={ob.ruleVersion.status} />
+            <Row label="Effective from" value={fmtDate(ob.ruleVersion.effectiveFrom)} />
+            <Row label="Legal status" value={ob.ruleVersion.legalStatus} />
+            <Row label="Authority" value={ob.ruleVersion.authorityLevel} />
+            <Row
+              label="Primary authority"
+              value={<a href={ob.ruleVersion.statutoryUrl} target="_blank" rel="noreferrer">{ob.ruleVersion.statutoryBasis}</a>}
+            />
+          </div>
+          {ob.ruleVersion.citations.length > 0 && (
+            <ul>
+              {ob.ruleVersion.citations.map((citation) => (
+                <li key={citation.id}>
+                  <a href={citation.url} target="_blank" rel="noreferrer">{citation.title}</a>
+                  {citation.locator ? ` · ${citation.locator}` : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {(ob.exceptions.length > 0 || ob.evidenceItems.length > 0 || ob.approvals.length > 0) && (
+        <div className="panel">
+          <h2>Readiness controls</h2>
+          {ob.exceptions.map((exception) => (
+            <div key={exception.id} className="alert alert-warning" style={{ marginBottom: 8 }}>
+              <strong>{exception.title}</strong> · {exception.status}
+              {exception.blocksFiling && " · Blocks filing readiness"}
+            </div>
+          ))}
+          <div className="detail-grid">
+            <Row label="Evidence items" value={`${ob.evidenceItems.filter((item) => item.status === "Verified").length}/${ob.evidenceItems.length} verified`} />
+            <Row label="Approval gates" value={`${ob.approvals.filter((item) => item.status === "Approved").length}/${ob.approvals.length} approved`} />
+          </div>
+        </div>
+      )}
 
       {/* Core details */}
       <div className="panel">
@@ -188,24 +310,56 @@ export default async function ObligationDetailPage({
         <h2>Source &amp; Audit</h2>
         <div className="detail-grid">
           <Row label="Source type" value={ob.sourceType} />
-          <Row label="Source document" value={ob.sourceDocumentReference} />
-          <Row label="Source page / paragraph" value={ob.sourcePageParagraph} />
-          <Row label="Created by" value={ob.createdBy} />
-          <Row label="Last updated by" value={ob.lastUpdatedBy} />
+          <Row label="Primary source document" value={ob.sourceDocument ? (primarySourceVisible ? <Link href={`/documents/${ob.sourceDocument.id}`}>{ob.sourceDocument.filename} · v{ob.sourceDocument.versionNumber}</Link> : "Restricted document") : ob.sourceDocumentReference ? "Legacy source reference withheld until linked and access-checked" : null} />
+          <Row label="Source page / paragraph" value={primarySourceVisible ? ob.sourcePageParagraph : ob.sourceDocumentId ? "Restricted" : null} />
+          <Row label="Created by" value={ob.createdBy ? `${ob.createdBy.name} (${ob.createdBy.id})` : null} />
+          <Row label="Last updated by" value={ob.lastUpdatedBy ? `${ob.lastUpdatedBy.name} (${ob.lastUpdatedBy.id})` : null} />
           <Row label="Created" value={fmtDate(ob.createdAt)} />
           <Row label="Last updated" value={fmtDate(ob.updatedAt)} />
         </div>
+        {visibleDocumentLinks.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div className="detail-label">All document links</div>
+            {visibleDocumentLinks.map((link) => (
+              <div key={link.id} className="text-sm" style={{ marginTop: 5 }}>
+                <Link href={`/documents/${link.document.id}`}>{link.document.filename} · v{link.document.versionNumber}</Link>
+                {` · ${link.linkType}${link.pageReference ? ` · ${link.pageReference}` : ""}`}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="panel">
+        <h2>Testable audit history</h2>
+        {visibleAuditEvents.length === 0 ? (
+          <p className="text-muted">No structured audit events recorded.</p>
+        ) : (
+          <table className="data-table">
+            <thead><tr><th>When</th><th>Event</th><th>Actor</th><th>Reason</th></tr></thead>
+            <tbody>
+              {visibleAuditEvents.map((event) => (
+                <tr key={event.id}>
+                  <td>{fmtDate(event.createdAt)}</td>
+                  <td>{event.action}</td>
+                  <td>{event.user ? `${event.user.name} (${event.userId})` : "System"}</td>
+                  <td>{event.reason ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Danger zone */}
       <div className="panel" style={{ borderColor: "var(--overdue)" }}>
         <h2>Danger zone</h2>
         <p className="text-sm text-muted">
-          Permanently deletes this obligation and all its data. This cannot be undone.
-          {!ob.archivedAt && " Consider archiving instead."}
+          Tombstone this obligation while retaining the immutable audit record. This requires a reason.
         </p>
         <form action={deleteAction}>
-          <button type="submit" className="btn btn-danger btn-sm">Delete obligation</button>
+          <input name="reason" className="form-input" required placeholder="Deletion reason" style={{ marginBottom: 8 }} />
+          <button type="submit" className="btn btn-danger btn-sm">Tombstone obligation</button>
         </form>
       </div>
     </>

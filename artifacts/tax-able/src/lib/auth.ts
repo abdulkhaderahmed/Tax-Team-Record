@@ -1,23 +1,56 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { prisma } from "./prisma";
+import { requireValidClerkConfiguration } from "./clerk-config";
+import {
+  assertPermission,
+  assertRole,
+  normalizeRole,
+  roleFromClerkOrgRole,
+  type AppPermission,
+  type AppRole,
+} from "./authz-policy";
 
 export type OrgContext = {
   organisation: { id: string; name: string; clerkOrgId: string | null };
-  user: { id: string; name: string; email: string; clerkUserId: string | null };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    clerkUserId: string | null;
+    role: AppRole;
+  };
   orgId: string;
   userId: string;
 };
 
-const clerkConfigured = Boolean(process.env.CLERK_SECRET_KEY);
+const clerkConfigured =
+  requireValidClerkConfiguration(process.env) === "configured";
 
 function toContext(
   organisation: { id: string; name: string; clerkOrgId: string | null },
-  user: { id: string; name: string; email: string; clerkUserId: string | null },
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    clerkUserId: string | null;
+    role: string;
+  },
 ): OrgContext {
   return {
-    organisation: { id: organisation.id, name: organisation.name, clerkOrgId: organisation.clerkOrgId },
-    user: { id: user.id, name: user.name, email: user.email, clerkUserId: user.clerkUserId },
+    organisation: {
+      id: organisation.id,
+      name: organisation.name,
+      clerkOrgId: organisation.clerkOrgId,
+    },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      clerkUserId: user.clerkUserId,
+      role: normalizeRole(user.role),
+    },
     orgId: organisation.id,
     userId: user.id,
   };
@@ -30,7 +63,9 @@ function toContext(
  */
 async function demoOrgContext(): Promise<OrgContext> {
   let organisation =
-    (await prisma.organisation.findUnique({ where: { clerkOrgId: "demo-org" } })) ??
+    (await prisma.organisation.findUnique({
+      where: { clerkOrgId: "demo-org" },
+    })) ??
     (await prisma.organisation.findFirst({ orderBy: { createdAt: "asc" } }));
   if (!organisation) {
     organisation = await prisma.organisation.create({
@@ -38,8 +73,10 @@ async function demoOrgContext(): Promise<OrgContext> {
     });
   }
 
-  let user =
-    (await prisma.user.findFirst({ where: { organisationId: organisation.id }, orderBy: { createdAt: "asc" } }));
+  let user = await prisma.user.findFirst({
+    where: { organisationId: organisation.id },
+    orderBy: { createdAt: "asc" },
+  });
   if (!user) {
     user = await prisma.user.create({
       data: {
@@ -60,11 +97,16 @@ async function demoOrgContext(): Promise<OrgContext> {
  * Throws a redirect to /sign-in if the session is missing or has no org.
  */
 export async function requireOrg(): Promise<OrgContext> {
+  // Every organisation-scoped view is request-specific, including keyless
+  // local demo mode. Without this boundary Next can freeze database-backed
+  // registers at build time when Clerk is deliberately absent.
+  await connection();
+
   if (!clerkConfigured) {
     return demoOrgContext();
   }
 
-  const { userId, orgId, orgSlug } = await auth();
+  const { userId, orgId, orgSlug, orgRole } = await auth();
   if (!userId || !orgId) {
     redirect("/sign-in");
   }
@@ -92,49 +134,51 @@ export async function requireOrg(): Promise<OrgContext> {
     const name =
       clerkUser?.firstName && clerkUser?.lastName
         ? `${clerkUser.firstName} ${clerkUser.lastName}`
-        : clerkUser?.firstName ?? clerkUser?.username ?? "User";
+        : (clerkUser?.firstName ?? clerkUser?.username ?? "User");
     user = await prisma.user.create({
       data: {
         name,
         email: primaryEmail ?? `${userId}@placeholder.local`,
         clerkUserId: userId,
         organisationId: organisation.id,
-        role: "member",
+        role: roleFromClerkOrgRole(orgRole),
       },
     });
   }
 
   if (user.organisationId !== organisation.id) {
+    throw new Error(
+      "This authenticated user is already linked to another organisation. Multi-organisation memberships are not enabled in this build.",
+    );
+  }
+
+  const currentOrgRole = roleFromClerkOrgRole(orgRole);
+  if (normalizeRole(user.role) !== currentOrgRole) {
     user = await prisma.user.update({
       where: { id: user.id },
-      data: { organisationId: organisation.id },
+      data: { role: currentOrgRole },
     });
   }
 
-  return {
-    organisation: {
-      id: organisation.id,
-      name: organisation.name,
-      clerkOrgId: organisation.clerkOrgId,
-    },
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      clerkUserId: user.clerkUserId,
-    },
-    orgId: organisation.id,
-    userId: user.id,
-  };
+  return toContext(organisation, user);
 }
 
-export async function requireAdmin(): Promise<OrgContext> {
-  if (!clerkConfigured) {
-    return demoOrgContext();
-  }
-  const { orgRole } = await auth();
-  if (orgRole !== "admin") {
-    throw new Error("Admin role required");
-  }
-  return requireOrg();
+export async function requireRole(
+  ...allowedRoles: AppRole[]
+): Promise<OrgContext> {
+  const context = await requireOrg();
+  assertRole(context.user.role, allowedRoles);
+  return context;
+}
+
+export async function requirePermission(
+  permission: AppPermission,
+): Promise<OrgContext> {
+  const context = await requireOrg();
+  assertPermission(context.user.role, permission);
+  return context;
+}
+
+export function requireAdmin(): Promise<OrgContext> {
+  return requireRole("admin");
 }

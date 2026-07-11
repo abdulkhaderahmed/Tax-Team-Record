@@ -1,5 +1,7 @@
 # Devin handoff
 
+> Historical handoff from 2026-07-09. Its task queue and “no auth yet” description are superseded by `CURRENT_STATE.md` and `ROADMAP.md` as of 2026-07-11. Retained only to preserve implementation history; do not execute it as the current plan.
+
 You (Devin) are the implementation tier for this repo. A strategy-tier agent maintains the docs; you turn specs into merged code. Read `CURRENT_STATE.md` first, then this.
 
 ## Repo orientation

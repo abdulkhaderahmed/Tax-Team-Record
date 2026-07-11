@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { fmtDate } from "@/lib/obligations";
+import { fmtDate, obligationDueDate } from "@/lib/obligations";
 import { activateDraft, restoreDraftToPending } from "@/app/actions/draftObligations";
-import { getRuleById } from "@/lib/rules-pack";
+import { requireOrg } from "@/lib/auth";
 
 function reviewBadge(status: string | null) {
   if (status === "pending")        return <span className="badge badge-yellow">Pending review</span>;
@@ -19,24 +19,24 @@ export default async function DraftsPage({
     entity?: string;
     tab?: string;
     generated?: string;
+    impacts?: string;
   }>;
 }) {
   const sp = await searchParams;
   const tab = sp.tab ?? "pending";
+  const { orgId } = await requireOrg();
 
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({
-        where: { organisationId: org.id },
-        orderBy: { legalName: "asc" },
-        select: { id: true, legalName: true },
-      })
-    : [];
+  const entities = await prisma.entity.findMany({
+    where: { organisationId: orgId, deletedAt: null },
+    orderBy: { legalName: "asc" },
+    select: { id: true, legalName: true },
+  });
 
   const whereBase = {
-    organisationId: org?.id ?? "",
+    organisationId: orgId,
     ruleId: { not: null as null },
     archivedAt: null,
+    deletedAt: null,
     ...(sp.entity ? { entityId: sp.entity } : {}),
   };
 
@@ -46,20 +46,23 @@ export default async function DraftsPage({
     : tab === "na" ? "not_applicable"
     : undefined; // "all"
 
-  const drafts = await prisma.manualObligation.findMany({
+  const drafts = await prisma.obligation.findMany({
     where: {
       ...whereBase,
       ...(statusFilter ? { draftReviewStatus: statusFilter } : {
         draftReviewStatus: { in: ["pending", "rejected", "not_applicable"] },
       }),
     },
-    include: { entity: { select: { id: true, legalName: true } } },
-    orderBy: [{ draftReviewStatus: "asc" }, { filingDeadline: "asc" }],
+    include: {
+      entity: { select: { id: true, legalName: true } },
+      ruleVersion: { include: { rule: true } },
+    },
+    orderBy: [{ draftReviewStatus: "asc" }, { filingDeadline: "asc" }, { paymentDeadline: "asc" }],
     take: 500,
   });
 
   // Counts for tab labels
-  const counts = await prisma.manualObligation.groupBy({
+  const counts = await prisma.obligation.groupBy({
     by: ["draftReviewStatus"],
     where: {
       ...whereBase,
@@ -75,6 +78,7 @@ export default async function DraftsPage({
   const tabParams = sp.entity ? `?entity=${sp.entity}` : "?";
 
   const generatedMsg = sp.generated ? parseInt(sp.generated, 10) : null;
+  const impactMsg = sp.impacts ? parseInt(sp.impacts, 10) : 0;
 
   return (
     <>
@@ -92,6 +96,9 @@ export default async function DraftsPage({
           {generatedMsg === 0
             ? "No new obligations were generated — all applicable rules are already covered or previously reviewed."
             : `${generatedMsg} draft obligation${generatedMsg === 1 ? "" : "s"} generated. Review each one below before activating.`}
+          {impactMsg > 0 && (
+            <> {impactMsg} regulatory impact review{impactMsg === 1 ? "" : "s"} added to the <Link href="/rule-impact">impact queue</Link>.</>
+          )}
         </div>
       )}
 
@@ -162,7 +169,7 @@ export default async function DraftsPage({
                 <th>Regime</th>
                 <th>Obligation type</th>
                 <th>Description</th>
-                <th>Filing deadline</th>
+                <th>Due date</th>
                 <th>Period</th>
                 <th>Status</th>
                 <th style={{ minWidth: 280 }}>Why generated / Calculation basis</th>
@@ -171,11 +178,11 @@ export default async function DraftsPage({
             </thead>
             <tbody>
               {drafts.map((ob) => {
-                const rule = ob.ruleId ? getRuleById(ob.ruleId) : undefined;
                 const activateAction = activateDraft.bind(null, ob.id);
                 const restoreAction = restoreDraftToPending.bind(null, ob.id);
                 const isPending = ob.draftReviewStatus === "pending";
                 const isRejectedOrNa = ob.draftReviewStatus === "rejected" || ob.draftReviewStatus === "not_applicable";
+                const dueDate = obligationDueDate(ob);
 
                 return (
                   <tr key={ob.id}>
@@ -190,14 +197,19 @@ export default async function DraftsPage({
                     <td className="text-sm text-muted">{ob.obligationType}</td>
                     <td className="text-sm" style={{ maxWidth: 260 }}>
                       {ob.description}
-                      {rule?.warningFlag && (
+                      {ob.ruleVersion?.humanReviewRequired && (
                         <span className="badge badge-orange" style={{ fontSize: 9, marginLeft: 4 }}>
                           ⚠ Review required
                         </span>
                       )}
+                      {ob.ruleVersion && (
+                        <div className="text-sm text-muted" style={{ marginTop: 4 }}>
+                          {ob.ruleVersion.rule.ruleKey} · exact version {ob.ruleVersion.version}
+                        </div>
+                      )}
                     </td>
                     <td className="text-sm" style={{ whiteSpace: "nowrap" }}>
-                      {ob.filingDeadline ? fmtDate(ob.filingDeadline) : "—"}
+                      {dueDate ? fmtDate(dueDate) : "—"}
                     </td>
                     <td className="text-sm text-muted" style={{ whiteSpace: "nowrap" }}>
                       {ob.periodStart && ob.periodEnd
@@ -208,7 +220,7 @@ export default async function DraftsPage({
                     <td style={{ maxWidth: 320, fontSize: 11, color: "var(--ink-secondary)" }}>
                       <div style={{ marginBottom: 4 }}>
                         <strong style={{ color: "var(--ink-secondary)" }}>Why:</strong>{" "}
-                        {ob.humanExplanation ?? "—"}
+                        {ob.whyApplies ?? ob.humanExplanation ?? "—"}
                       </div>
                       <div>
                         <strong style={{ color: "var(--ink-secondary)" }}>Calc:</strong>{" "}

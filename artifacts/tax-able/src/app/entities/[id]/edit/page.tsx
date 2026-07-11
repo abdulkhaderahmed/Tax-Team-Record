@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { updateEntity } from "@/app/actions/entities";
 import { EntityForm, type EntityFormValues } from "../../_components/EntityForm";
 import { toDateInput } from "@/lib/obligations";
+import { requireOrg } from "@/lib/auth";
 
 export default async function EditEntityPage({
   params,
@@ -11,8 +12,9 @@ export default async function EditEntityPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const { orgId } = await requireOrg();
 
-  const entity = await prisma.entity.findUnique({ where: { id } });
+  const entity = await prisma.entity.findFirst({ where: { id, organisationId: orgId, deletedAt: null } });
   if (!entity) notFound();
 
   const action = updateEntity.bind(null, id);
@@ -33,6 +35,7 @@ export default async function EditEntityPage({
     isLargeCompany: entity.isLargeCompany,
     isVeryLargeCompany: entity.isVeryLargeCompany,
     taxableProfitsBand: entity.taxableProfitsBand,
+    qipAssociatedCompanyCount: entity.qipAssociatedCompanyCount,
 
     vatRegistered: entity.vatRegistered,
     vatRegistrationNumber: entity.vatRegistrationNumber,
@@ -43,6 +46,10 @@ export default async function EditEntityPage({
     hasEmi: entity.hasEmi,
     p11dRequired: entity.p11dRequired,
     psaRequired: entity.psaRequired,
+    benefitsReportingMethod: entity.benefitsReportingMethod,
+    hasLoansOrAccommodationBenefits: entity.hasLoansOrAccommodationBenefits,
+    psaAgreementStatus: entity.psaAgreementStatus,
+    psaPaymentMethod: entity.psaPaymentMethod,
 
     rdClaimExpected: entity.rdClaimExpected,
     rdNotificationNeeded: entity.rdNotificationNeeded,
@@ -57,6 +64,7 @@ export default async function EditEntityPage({
     lossesBroughtForward: entity.lossesBroughtForward,
     transferPricingRelevant: entity.transferPricingRelevant,
     hasPillar2: entity.hasPillar2,
+    pillar2FirstReportingPeriod: entity.pillar2FirstReportingPeriod,
 
     saoInScope: entity.saoInScope,
     ccoInScope: entity.ccoInScope,

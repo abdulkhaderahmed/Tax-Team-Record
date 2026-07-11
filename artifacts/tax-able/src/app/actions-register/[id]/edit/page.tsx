@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { updateAction } from "@/app/actions/actionsRegister";
 import { ActionForm, type ActionFormValues } from "../../_components/ActionForm";
 import { toDateInput } from "@/lib/obligations";
+import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
+import { hasPermission } from "@/lib/authz-policy";
 
 export default async function EditActionPage({
   params,
@@ -11,18 +14,25 @@ export default async function EditActionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const context = await requireOrg();
 
-  const a = await prisma.action.findUnique({ where: { id } });
+  const a = await prisma.action.findFirst({
+    where: { id, organisationId: context.orgId, deletedAt: null },
+  });
   if (!a) notFound();
 
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({
-        where: { organisationId: org.id },
-        orderBy: { legalName: "asc" },
-        select: { id: true, legalName: true },
-      })
-    : [];
+  const [entities, documents] = await Promise.all([
+    prisma.entity.findMany({
+      where: { organisationId: context.orgId, deletedAt: null },
+      orderBy: { legalName: "asc" },
+      select: { id: true, legalName: true },
+    }),
+    prisma.document.findMany({
+      where: documentAccessWhere(context, "view"),
+      orderBy: { uploadedAt: "desc" },
+      select: { id: true, filename: true, versionNumber: true },
+    }),
+  ]);
 
   const action = updateAction.bind(null, id);
 
@@ -67,9 +77,9 @@ export default async function EditActionPage({
     exceptionRequired: a.exceptionRequired,
 
     sourceType: a.sourceType,
+    sourceDocumentId: a.sourceDocumentId,
     sourceDocumentReference: a.sourceDocumentReference,
     sourcePageParagraph: a.sourcePageParagraph,
-    createdBy: a.createdBy,
   };
 
   return (
@@ -92,8 +102,10 @@ export default async function EditActionPage({
         action={action}
         defaultValues={defaultValues}
         entities={entities}
+        documents={documents}
         cancelHref={`/actions-register/${id}`}
         submitLabel="Save Changes"
+        canReviewControls={hasPermission(context.user.role, "review:perform")}
       />
     </>
   );

@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireOrg } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { recordUserAuditEvent } from "@/lib/audit";
 
 export async function createSourceSystem(formData: FormData) {
-  const { organisation: org, user } = await requireOrg();
-  const orgId = org.id;
-  const userId = user.id;
+  const context = await requirePermission("record:write");
 
   const name = formData.get("name") as string;
   const systemType = formData.get("systemType") as string;
@@ -16,9 +15,10 @@ export async function createSourceSystem(formData: FormData) {
     throw new Error("Name and system type are required.");
   }
 
-  const ss = await prisma.sourceSystem.create({
-    data: {
-      organisationId: orgId,
+  const ss = await prisma.$transaction(async (tx) => {
+    const created = await tx.sourceSystem.create({
+      data: {
+      organisationId: context.orgId,
       name: name.trim(),
       systemType: systemType.trim(),
       description: (formData.get("description") as string) || null,
@@ -30,16 +30,14 @@ export async function createSourceSystem(formData: FormData) {
       containsPersonalData: formData.get("containsPersonalData") === "true",
       containsPrivilegedData: formData.get("containsPrivilegedData") === "true",
       status: (formData.get("status") as string) || "Active",
-    },
-  });
-
-  await prisma.auditEvent.create({
-    data: {
-      organisationId: orgId,
-      userId: userId,
-      action: "source_system_created",
-      detail: `Source system created: ${ss.name}`,
-    },
+      },
+    });
+    await recordUserAuditEvent(context, {
+      action: "SOURCE_SYSTEM_CREATED",
+      target: { objectType: "SourceSystem", objectId: created.id },
+      after: created,
+    }, tx);
+    return created;
   });
 
   revalidatePath("/sources");
@@ -47,9 +45,7 @@ export async function createSourceSystem(formData: FormData) {
 }
 
 export async function updateSourceSystem(id: string, formData: FormData) {
-  const { organisation: org, user } = await requireOrg();
-  const orgId = org.id;
-  const userId = user.id;
+  const context = await requirePermission("record:write");
 
   const name = formData.get("name") as string;
   const systemType = formData.get("systemType") as string;
@@ -57,9 +53,14 @@ export async function updateSourceSystem(id: string, formData: FormData) {
     throw new Error("Name and system type are required.");
   }
 
-  const ss = await prisma.sourceSystem.update({
-    where: { id },
-    data: {
+  const ss = await prisma.$transaction(async (tx) => {
+    const before = await tx.sourceSystem.findFirst({
+      where: { id, organisationId: context.orgId },
+    });
+    if (!before) throw new Error("Source system not found.");
+    const updated = await tx.sourceSystem.update({
+      where: { id },
+      data: {
       name: name.trim(),
       systemType: systemType.trim(),
       description: (formData.get("description") as string) || null,
@@ -71,16 +72,15 @@ export async function updateSourceSystem(id: string, formData: FormData) {
       containsPersonalData: formData.get("containsPersonalData") === "true",
       containsPrivilegedData: formData.get("containsPrivilegedData") === "true",
       status: (formData.get("status") as string) || "Active",
-    },
-  });
-
-  await prisma.auditEvent.create({
-    data: {
-      organisationId: orgId,
-      userId: userId,
-      action: "source_system_edited",
-      detail: `Source system edited: ${ss.name}`,
-    },
+      },
+    });
+    await recordUserAuditEvent(context, {
+      action: "SOURCE_SYSTEM_UPDATED",
+      target: { objectType: "SourceSystem", objectId: id },
+      before,
+      after: updated,
+    }, tx);
+    return updated;
   });
 
   revalidatePath("/sources");
@@ -89,22 +89,24 @@ export async function updateSourceSystem(id: string, formData: FormData) {
 }
 
 export async function archiveSourceSystem(id: string) {
-  const { organisation: org, user } = await requireOrg();
-  const orgId = org.id;
-  const userId = user.id;
+  const context = await requirePermission("record:delete");
 
-  const ss = await prisma.sourceSystem.update({
-    where: { id },
-    data: { status: "Archived" },
-  });
-
-  await prisma.auditEvent.create({
-    data: {
-      organisationId: orgId,
-      userId: userId,
-      action: "source_system_archived",
-      detail: `Source system archived: ${ss.name}`,
-    },
+  await prisma.$transaction(async (tx) => {
+    const before = await tx.sourceSystem.findFirst({
+      where: { id, organisationId: context.orgId },
+    });
+    if (!before) throw new Error("Source system not found.");
+    const archived = await tx.sourceSystem.update({
+      where: { id },
+      data: { status: "Archived" },
+    });
+    await recordUserAuditEvent(context, {
+      action: "SOURCE_SYSTEM_ARCHIVED",
+      target: { objectType: "SourceSystem", objectId: id },
+      before,
+      after: archived,
+      reason: "Archived by an authorised user.",
+    }, tx);
   });
 
   revalidatePath("/sources");

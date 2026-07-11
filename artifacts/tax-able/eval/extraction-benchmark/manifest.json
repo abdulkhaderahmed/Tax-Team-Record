@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1",
+  "fixtures": [
+    {
+      "fixtureId": "corpus-01",
+      "pathEnv": "TAXABLE_BENCHMARK_FIXTURE_01_PATH",
+      "sha256": "4ad83c2cdbb8e102fcdc68d92dd4c64a8ca044e53d61cfdfda17845042c1bf9c",
+      "physicalPageCount": 37
+    },
+    {
+      "fixtureId": "corpus-02",
+      "pathEnv": "TAXABLE_BENCHMARK_FIXTURE_02_PATH",
+      "sha256": "28a22caf8bee02181f11873a125e58a0988dfbd40bc1640a725bb0f7d3cb7f1c",
+      "physicalPageCount": 66
+    },
+    {
+      "fixtureId": "corpus-03",
+      "pathEnv": "TAXABLE_BENCHMARK_FIXTURE_03_PATH",
+      "sha256": "f1a398ff589e5278b7a00c4b2a09d151d6a6a6c1e4b4eea623ed61030f8ebbef",
+      "physicalPageCount": 45
+    },
+    {
+      "fixtureId": "corpus-04",
+      "pathEnv": "TAXABLE_BENCHMARK_FIXTURE_04_PATH",
+      "sha256": "f9b6fbe5e0d5de2c7c5080df7e697292cec06a63575b49826b907e4814a88ec3",
+      "physicalPageCount": 25
+    },
+    {
+      "fixtureId": "corpus-05",
+      "pathEnv": "TAXABLE_BENCHMARK_FIXTURE_05_PATH",
+      "sha256": "b9aa56d7c9b1d5e4858ec99290589bde15cc3f31d9478bd0d92d1a452f017509",
+      "physicalPageCount": 13
+    }
+  ]
+}

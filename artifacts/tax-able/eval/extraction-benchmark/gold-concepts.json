@@ -1,0 +1,567 @@
+{
+  "schemaVersion": "1",
+  "confidentiality": "non_confidential_concept_inventory",
+  "inventoryStatus": "draft_unverified",
+  "pageNumbering": "one_based_physical_pdf_page",
+  "fixtures": [
+    {
+      "fixtureId": "corpus-01",
+      "documentArchetype": "External adviser tax compliance and control deliverable",
+      "targetSet": {
+        "completeness": "partial",
+        "verificationStatus": "draft_unverified"
+      },
+      "negativeControlFor": [],
+      "concepts": [
+        {
+          "conceptId": "corpus-01--corporation-tax-return",
+          "conceptKey": "corporation-tax-return",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Corporation tax return compliance is identified as a tracked obligation.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "unconditional",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--quarterly-instalment-payments",
+          "conceptKey": "quarterly-instalment-payments",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Quarterly corporation tax payments are relevant only if the applicable size and group tests are met.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "qips-size-and-associated-company-tests-met",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--pillar-two-registration",
+          "conceptKey": "pillar-two-registration",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Pillar Two registration is identified subject to the multinational or domestic minimum-tax scope test.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "pillar-two-group-in-scope",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--pillar-two-return-and-payment",
+          "conceptKey": "pillar-two-return-and-payment",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Pillar Two return and payment duties are identified subject to the group being in scope.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "pillar-two-group-in-scope",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--vat-returns",
+          "conceptKey": "vat-returns",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "VAT returns are identified where the relevant entity or VAT group is registered.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "vat-registration-active",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--p11d-reporting",
+          "conceptKey": "p11d-reporting",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Benefits reporting is identified subject to benefits and payrolling facts.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "reportable-benefits-not-fully-payrolled",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--psa-payment",
+          "conceptKey": "psa-payment",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "PAYE Settlement Agreement payment is identified where an agreement and covered benefits exist.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "psa-active-and-items-covered",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--ers-annual-return",
+          "conceptKey": "ers-annual-return",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Employment-related securities reporting is identified where a reportable plan or event exists.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "ers-plan-or-reportable-event-exists",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--fatca-crs-reporting",
+          "conceptKey": "fatca-crs-reporting",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "International information reporting is identified subject to entity classification and reportable-account facts.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "reporting-financial-institution-with-reportable-data",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--short-term-business-visitor-reporting",
+          "conceptKey": "short-term-business-visitor-reporting",
+          "recordType": "obligation",
+          "nonConfidentialSummary": "Short-term business visitor or section 690 arrangements are identified subject to mobile-employee facts.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "qualifying-inbound-or-part-year-mobile-employees",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--tax-control-approval",
+          "conceptKey": "tax-control-approval",
+          "recordType": "action",
+          "nonConfidentialSummary": "A human approval step is required before the relevant compliance position is treated as final.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "unconditional",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-01--information-request-list",
+          "conceptKey": "information-request-list",
+          "recordType": "action",
+          "nonConfidentialSummary": "Information must be obtained from internal stakeholders to complete the advised compliance work.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "unconditional",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        }
+      ]
+    },
+    {
+      "fixtureId": "corpus-02",
+      "documentArchetype": "Transaction tax due-diligence deliverable",
+      "targetSet": {
+        "completeness": "partial",
+        "verificationStatus": "draft_unverified"
+      },
+      "negativeControlFor": [],
+      "concepts": [
+        {
+          "conceptId": "corpus-02--section-431-election-action",
+          "conceptKey": "section-431-election-action",
+          "recordType": "action",
+          "nonConfidentialSummary": "A section 431 election action is identified subject to restricted-securities facts and the statutory timing window.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "restricted-securities-acquired-and-election-window-open",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [61],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-02--dac6-hallmark-assessment",
+          "conceptKey": "dac6-hallmark-assessment",
+          "recordType": "action",
+          "nonConfidentialSummary": "A disclosure-regime hallmark assessment is identified rather than an unconditional filing duty.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "cross-border-arrangement-meets-reportable-hallmark",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [55],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-02--long-horizon-tax-tripwires",
+          "conceptKey": "long-horizon-tax-tripwires",
+          "recordType": "tripwire",
+          "nonConfidentialSummary": "Potential future tax consequences are framed as monitoring tripwires rather than current obligations.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        }
+      ]
+    },
+    {
+      "fixtureId": "corpus-03",
+      "documentArchetype": "Post-transaction tax implementation report",
+      "targetSet": {
+        "completeness": "partial",
+        "verificationStatus": "draft_unverified"
+      },
+      "negativeControlFor": [],
+      "concepts": [
+        {
+          "conceptId": "corpus-03--post-deal-tax-registrations",
+          "conceptKey": "post-deal-tax-registrations",
+          "recordType": "action",
+          "nonConfidentialSummary": "Relevant tax registrations must be assessed and completed following the transaction.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "transaction-creates-registration-requirement",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-03--section-431-election-action",
+          "conceptKey": "section-431-election-action",
+          "recordType": "action",
+          "nonConfidentialSummary": "A section 431 election action is identified subject to restricted-securities facts and timing.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "restricted-securities-acquired-and-election-window-open",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-03--listing-related-tax-actions",
+          "conceptKey": "listing-related-tax-actions",
+          "recordType": "action",
+          "nonConfidentialSummary": "Tax work connected with the relevant market-listing steps is identified as an implementation action.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "listing-step-proceeds",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-03--stamp-duty-filing-and-payment",
+          "conceptKey": "stamp-duty-filing-and-payment",
+          "recordType": "action",
+          "nonConfidentialSummary": "Stamp-duty filing and payment steps are identified subject to the transaction documents and chargeability analysis.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "chargeable-instrument-executed",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-03--vat-recovery-review",
+          "conceptKey": "vat-recovery-review",
+          "recordType": "action",
+          "nonConfidentialSummary": "VAT recovery on transaction costs requires a fact-specific review before a position is taken.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "transaction-cost-vat-incurred",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-03--ers-emi-compliance-actions",
+          "conceptKey": "ers-emi-compliance-actions",
+          "recordType": "action",
+          "nonConfidentialSummary": "Employment-related securities or EMI implementation and reporting steps require follow-up where the arrangements apply.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "conditional",
+            "conditionKey": "ers-or-emi-arrangements-apply",
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        },
+        {
+          "conceptId": "corpus-03--implementation-governance-approval",
+          "conceptKey": "implementation-governance-approval",
+          "recordType": "action",
+          "nonConfidentialSummary": "Implementation positions require documented governance and approval before completion.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "unconditional",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [33, 34],
+            "verificationStatus": "draft_unverified"
+          }
+        }
+      ]
+    },
+    {
+      "fixtureId": "corpus-04",
+      "documentArchetype": "Tax valuation report negative control",
+      "targetSet": {
+        "completeness": "complete",
+        "verificationStatus": "draft_unverified"
+      },
+      "negativeControlFor": ["obligation", "action"],
+      "concepts": [
+        {
+          "conceptId": "corpus-04--valuation-input-assumptions",
+          "conceptKey": "valuation-input-assumptions",
+          "recordType": "assumption",
+          "nonConfidentialSummary": "Valuation inputs and factual dependencies should be captured as assumptions, not tax deadlines.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-04--valuation-methodology-caveats",
+          "conceptKey": "valuation-methodology-caveats",
+          "recordType": "caveat",
+          "nonConfidentialSummary": "Methodology limitations should be retained as caveats rather than converted into compliance actions.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-04--valuation-report-evidence",
+          "conceptKey": "valuation-report-evidence",
+          "recordType": "evidence",
+          "nonConfidentialSummary": "The report and its supporting material are evidence for a valuation position.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        }
+      ]
+    },
+    {
+      "fixtureId": "corpus-05",
+      "documentArchetype": "Tax valuation report negative control",
+      "targetSet": {
+        "completeness": "complete",
+        "verificationStatus": "draft_unverified"
+      },
+      "negativeControlFor": ["obligation", "action"],
+      "concepts": [
+        {
+          "conceptId": "corpus-05--valuation-input-assumptions",
+          "conceptKey": "valuation-input-assumptions",
+          "recordType": "assumption",
+          "nonConfidentialSummary": "Valuation inputs and factual dependencies should be captured as assumptions, not tax deadlines.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-05--valuation-methodology-caveats",
+          "conceptKey": "valuation-methodology-caveats",
+          "recordType": "caveat",
+          "nonConfidentialSummary": "Methodology limitations should be retained as caveats rather than converted into compliance actions.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        },
+        {
+          "conceptId": "corpus-05--valuation-report-evidence",
+          "conceptKey": "valuation-report-evidence",
+          "recordType": "evidence",
+          "nonConfidentialSummary": "The report and its supporting material are evidence for a valuation position.",
+          "materiality": "material",
+          "annotationStatus": "draft_unverified",
+          "materialityStatus": "draft_unverified",
+          "condition": {
+            "applicability": "not_applicable",
+            "conditionKey": null,
+            "verificationStatus": "draft_unverified"
+          },
+          "citation": {
+            "acceptedPhysicalPages": [],
+            "verificationStatus": "not_annotated"
+          }
+        }
+      ]
+    }
+  ]
+}

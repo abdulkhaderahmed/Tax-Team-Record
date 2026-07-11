@@ -39,9 +39,14 @@ export default async function ConflictDetailPage({
   const { id } = await params;
   const conflict = await prisma.sourceConflict.findUnique({
     where: { id },
-    include: { dataCategory: true, entity: true, sourceA: true, sourceB: true },
+    include: { dataCategory: true, entity: true, sourceA: true, sourceB: true, reviewOwner: true },
   });
   if (!conflict || conflict.organisationId !== orgId) notFound();
+  const users = await prisma.user.findMany({
+    where: { organisationId: orgId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true },
+  });
 
   const isResolved =
     conflict.status === "Resolved" || conflict.status === "Closed as not material";
@@ -118,7 +123,7 @@ export default async function ConflictDetailPage({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
             <div>
               <div className="detail-label">Review owner</div>
-              <div>{conflict.reviewOwner || "—"}</div>
+              <div>{conflict.reviewOwner ? `${conflict.reviewOwner.name} (${conflict.reviewOwner.id})` : "—"}</div>
             </div>
             <div>
               <div className="detail-label">Required confirmation</div>
@@ -165,7 +170,12 @@ export default async function ConflictDetailPage({
                   </div>
                   <div className="form-row">
                     <label className="form-label">Review owner</label>
-                    <input name="reviewOwner" className="form-input" defaultValue={conflict.reviewOwner ?? ""} />
+                    <select name="reviewOwnerId" className="form-input" defaultValue={conflict.reviewOwnerId ?? ""}>
+                      <option value="">— unassigned —</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>{user.name} · {user.email} · {user.id}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="form-row" style={{ marginBottom: 16 }}>

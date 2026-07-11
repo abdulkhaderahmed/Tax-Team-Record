@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { fmtDate } from "@/lib/obligations";
+import { fmtDate, obligationDueDate } from "@/lib/obligations";
 import { rejectDraft } from "@/app/actions/draftObligations";
+import { requireOrg } from "@/lib/auth";
 
 export default async function RejectDraftPage({
   params,
@@ -10,8 +11,9 @@ export default async function RejectDraftPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ob = await prisma.manualObligation.findUnique({
-    where: { id },
+  const { orgId } = await requireOrg();
+  const ob = await prisma.obligation.findFirst({
+    where: { id, organisationId: orgId, deletedAt: null },
     include: { entity: { select: { id: true, legalName: true } } },
   });
 
@@ -46,8 +48,8 @@ export default async function RejectDraftPage({
             <div className="detail-value">{ob.description}</div>
           </div>
           <div className="detail-item">
-            <div className="detail-label">Filing deadline</div>
-            <div className="detail-value">{ob.filingDeadline ? fmtDate(ob.filingDeadline) : "—"}</div>
+            <div className="detail-label">Due date</div>
+            <div className="detail-value">{obligationDueDate(ob) ? fmtDate(obligationDueDate(ob)!) : "—"}</div>
           </div>
           <div className="detail-item" style={{ gridColumn: "1 / -1" }}>
             <div className="detail-label">Why generated</div>

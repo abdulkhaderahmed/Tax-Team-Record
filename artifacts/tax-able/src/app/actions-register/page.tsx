@@ -56,12 +56,13 @@ export default async function ActionsRegisterPage({
   const showArchived = sp.archived === "1";
 
   const entities = await prisma.entity.findMany({
-    where: { organisationId: orgId },
+    where: { organisationId: orgId, deletedAt: null },
     orderBy: { legalName: "asc" },
   });
 
   const conditions: Prisma.ActionWhereInput[] = [
     { organisationId: orgId },
+    { deletedAt: null },
     { archivedAt: showArchived ? { not: null } : null },
   ];
 

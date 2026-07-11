@@ -8,6 +8,8 @@ import {
   deleteAction,
 } from "@/app/actions/actionsRegister";
 import { OwnershipAndControls } from "@/components/ownership-controls";
+import { requireOrg } from "@/lib/auth";
+import { canUseDocumentPermission } from "@/lib/authz-policy";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -24,17 +26,75 @@ export default async function ActionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const context = await requireOrg();
+  const orgId = context.orgId;
+  const now = new Date();
 
   const [a, raciAssignments, statusHistory] = await Promise.all([
-    prisma.action.findUnique({
-      where: { id },
-      include: { entity: { select: { id: true, legalName: true } } },
+    prisma.action.findFirst({
+      where: { id, organisationId: orgId, deletedAt: null },
+      include: {
+        entity: { select: { id: true, legalName: true } },
+        createdBy: { select: { id: true, name: true } },
+        lastUpdatedBy: { select: { id: true, name: true } },
+        sourceDocument: {
+          select: {
+            id: true,
+            organisationId: true,
+            filename: true,
+            versionNumber: true,
+            restrictedAccess: true,
+            deletedAt: true,
+            accessGrants: { where: { organisationId: context.orgId, userId: context.userId, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }, select: { permission: true }, take: 1 },
+          },
+        },
+        documentLinks: {
+          include: {
+            document: {
+              select: {
+                id: true,
+                organisationId: true,
+                filename: true,
+                versionNumber: true,
+                restrictedAccess: true,
+                deletedAt: true,
+                accessGrants: { where: { organisationId: context.orgId, userId: context.userId, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }, select: { permission: true }, take: 1 },
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        exceptions: { where: { status: { in: ["Open", "In progress"] } }, orderBy: { createdAt: "desc" } },
+        evidenceItems: { orderBy: { createdAt: "desc" } },
+        approvals: { orderBy: { requestedAt: "desc" } },
+      },
     }),
     prisma.raciAssignment.findMany({ where: { actionId: id }, include: { party: true } }),
-    prisma.statusHistory.findMany({ where: { objectType: "Action", objectId: id }, orderBy: { changedAt: "desc" }, take: 50 }),
+    prisma.statusHistory.findMany({ where: { objectType: "Action", objectId: id }, include: { changedBy: { select: { id: true, name: true } } }, orderBy: { changedAt: "desc" }, take: 50 }),
   ]);
 
   if (!a) notFound();
+
+  const canViewDocument = (document: {
+    organisationId: string;
+    restrictedAccess: boolean;
+    deletedAt: Date | null;
+    accessGrants: { permission: string }[];
+  }) =>
+    document.organisationId === context.orgId &&
+    document.deletedAt == null &&
+    canUseDocumentPermission(
+      context.user.role,
+      document.restrictedAccess,
+      document.accessGrants[0]?.permission,
+      "view",
+    );
+  const primarySourceVisible = a.sourceDocument
+    ? canViewDocument(a.sourceDocument)
+    : false;
+  const visibleDocumentLinks = a.documentLinks.filter((link) =>
+    canViewDocument(link.document),
+  );
 
   const archiveActionBound = archiveAction.bind(null, id);
   const unarchiveActionBound = unarchiveAction.bind(null, id);
@@ -111,6 +171,21 @@ export default async function ActionDetailPage({
         statusHistory={statusHistory}
       />
 
+      {(a.exceptions.length > 0 || a.evidenceItems.length > 0 || a.approvals.length > 0) && (
+        <div className="panel">
+          <h2>Readiness controls</h2>
+          {a.exceptions.map((exception) => (
+            <div key={exception.id} className="alert alert-warning" style={{ marginBottom: 8 }}>
+              <strong>{exception.title}</strong> · {exception.status}{exception.blocksFiling ? " · Blocks readiness" : ""}
+            </div>
+          ))}
+          <div className="detail-grid">
+            <Row label="Evidence items" value={`${a.evidenceItems.filter((item) => item.status === "Verified").length}/${a.evidenceItems.length} verified`} />
+            <Row label="Approval gates" value={`${a.approvals.filter((item) => item.status === "Approved").length}/${a.approvals.length} approved`} />
+          </div>
+        </div>
+      )}
+
       {/* Core details */}
       <div className="panel">
         <h2>Core details</h2>
@@ -148,23 +223,35 @@ export default async function ActionDetailPage({
         <h2>Source &amp; Audit</h2>
         <div className="detail-grid">
           <Row label="Source type" value={a.sourceType} />
-          <Row label="Source document" value={a.sourceDocumentReference} />
-          <Row label="Source page / paragraph" value={a.sourcePageParagraph} />
-          <Row label="Created by" value={a.createdBy} />
+          <Row label="Primary source document" value={a.sourceDocument ? (primarySourceVisible ? <Link href={`/documents/${a.sourceDocument.id}`}>{a.sourceDocument.filename} · v{a.sourceDocument.versionNumber}</Link> : "Restricted document") : a.sourceDocumentReference ? "Legacy source reference withheld until linked and access-checked" : null} />
+          <Row label="Source page / paragraph" value={primarySourceVisible ? a.sourcePageParagraph : a.sourceDocumentId ? "Restricted" : null} />
+          <Row label="Created by" value={a.createdBy ? `${a.createdBy.name} (${a.createdBy.id})` : null} />
+          <Row label="Last updated by" value={a.lastUpdatedBy ? `${a.lastUpdatedBy.name} (${a.lastUpdatedBy.id})` : null} />
           <Row label="Created" value={fmtDate(a.createdAt)} />
           <Row label="Last updated" value={fmtDate(a.updatedAt)} />
         </div>
+        {visibleDocumentLinks.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div className="detail-label">All document links</div>
+            {visibleDocumentLinks.map((link) => (
+              <div key={link.id} className="text-sm" style={{ marginTop: 5 }}>
+                <Link href={`/documents/${link.document.id}`}>{link.document.filename} · v{link.document.versionNumber}</Link>
+                {` · ${link.linkType}${link.pageReference ? ` · ${link.pageReference}` : ""}`}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Danger zone */}
       <div className="panel" style={{ borderColor: "var(--overdue)" }}>
         <h2>Danger zone</h2>
         <p className="text-sm text-muted">
-          Permanently deletes this action and all its data. This cannot be undone.
-          {!a.archivedAt && " Consider archiving instead."}
+          Tombstone this action while retaining its audit history. A reason is required.
         </p>
         <form action={deleteActionBound}>
-          <button type="submit" className="btn btn-danger btn-sm">Delete action</button>
+          <input name="reason" className="form-input" required placeholder="Deletion reason" style={{ marginBottom: 8 }} />
+          <button type="submit" className="btn btn-danger btn-sm">Tombstone action</button>
         </form>
       </div>
     </>

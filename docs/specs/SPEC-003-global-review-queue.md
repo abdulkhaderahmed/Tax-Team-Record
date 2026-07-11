@@ -1,6 +1,6 @@
 # SPEC-003 — Global review queue and background extraction
 
-Status: ready · Owner: Devin · Depends on: SPEC-001
+Status: global queue, durable leased jobs, OCR/page-aware extraction and review-to-record controls implemented; production worker operations and accuracy gates remain unproven · Depends on: SPEC-001
 
 ## Problem
 Review items only exist inside a single extraction run's page (`/documents/[id]/extraction/[runId]`). A user with three uploaded documents has no answer to "what needs my review right now?" — the product's central daily question. Separately, extraction runs synchronously inside a server action; long documents will hit client timeouts.

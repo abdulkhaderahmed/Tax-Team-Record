@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { MONTH_NAMES } from "@/lib/obligations";
+import { MONTH_NAMES, obligationDueDate } from "@/lib/obligations";
 import { REGIMES, STATUS_VALUES } from "../_constants";
+import { requireOrg } from "@/lib/auth";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -57,6 +58,7 @@ export default async function ObligationsCalendarPage({
   }>;
 }) {
   const sp = await searchParams;
+  const { orgId } = await requireOrg();
 
   const nowUtc = new Date();
   const year  = parseInt(sp.year  ?? String(nowUtc.getUTCFullYear()),     10);
@@ -91,35 +93,38 @@ export default async function ObligationsCalendarPage({
   endOfGrid.setUTCDate(endOfGrid.getUTCDate() + 1);
 
   // Data
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({
-        where: { organisationId: org.id },
-        orderBy: { legalName: "asc" },
-        select: { id: true, legalName: true },
-      })
-    : [];
+  const entities = await prisma.entity.findMany({
+    where: { organisationId: orgId, deletedAt: null },
+    orderBy: { legalName: "asc" },
+    select: { id: true, legalName: true },
+  });
 
-  const conditions: Prisma.ManualObligationWhereInput[] = [
-    { organisationId: org?.id ?? "" },
+  const conditions: Prisma.ObligationWhereInput[] = [
+    { organisationId: orgId },
     { archivedAt: null },
-    { filingDeadline: { gte: startOfGrid, lt: endOfGrid } },
+    { deletedAt: null },
+    { OR: [{ draftReviewStatus: null }, { draftReviewStatus: "activated" }] },
+    { OR: [
+      { filingDeadline: { gte: startOfGrid, lt: endOfGrid } },
+      { paymentDeadline: { gte: startOfGrid, lt: endOfGrid } },
+    ] },
   ];
   if (sp.entity) conditions.push({ entityId: sp.entity });
   if (sp.regime) conditions.push({ regime: sp.regime });
   if (sp.status) conditions.push({ overallWorkflowStatus: sp.status });
 
-  const obligations = await prisma.manualObligation.findMany({
+  const obligations = await prisma.obligation.findMany({
     where: { AND: conditions },
     include: { entity: { select: { id: true, legalName: true } } },
-    orderBy: { filingDeadline: "asc" },
+    orderBy: [{ filingDeadline: "asc" }, { paymentDeadline: "asc" }],
   });
 
   // Group by UTC date key
   const byDate = new Map<string, typeof obligations>();
   for (const ob of obligations) {
-    if (!ob.filingDeadline) continue;
-    const k = dateKey(ob.filingDeadline);
+    const dueDate = obligationDueDate(ob);
+    if (!dueDate) continue;
+    const k = dateKey(dueDate);
     if (!byDate.has(k)) byDate.set(k, []);
     byDate.get(k)!.push(ob);
   }

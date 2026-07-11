@@ -5,6 +5,14 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { computeOverallStatus } from "@/lib/ownership-control";
 import { recordFieldChanges, recordOverallStatusRecalculated } from "@/lib/status-history";
+import { requirePermission } from "@/lib/auth";
+import { requireDocumentAccess } from "@/lib/authz";
+import { recordUserAuditEvent } from "@/lib/audit";
+import { hasPermission } from "@/lib/authz-policy";
+import {
+  initialControlledRecordState,
+  protectControlledRecordState,
+} from "@/lib/record-control-policy";
 
 const TRACKED_FIELDS = [
   "responsibleParty", "accountableParty", "consultedParty", "informedParty", "externalAdviser", "externalOperationalOwner",
@@ -79,48 +87,92 @@ function parseActionForm(formData: FormData) {
     exceptionRequired: bool(formData, "exceptionRequired"),
 
     sourceType:              str(formData, "sourceType"),
+    sourceDocumentId:        str(formData, "sourceDocumentId"),
     sourceDocumentReference: str(formData, "sourceDocumentReference"),
     sourcePageParagraph:     str(formData, "sourcePageParagraph"),
-    createdBy:               str(formData, "createdBy"),
   };
 }
 
+type ActionFormData = ReturnType<typeof parseActionForm>;
+
 function resolveOverallStatus(
-  data: ReturnType<typeof parseActionForm>,
-  formData: FormData
+  data: ActionFormData,
+  formData: FormData,
+  hasExternalBlocker = false,
+  allowOverride = false,
 ): { overallStatus: string; overallStatusIsOverride: boolean; computed: string } {
+  if (hasExternalBlocker) {
+    return { overallStatus: "Blocked", overallStatusIsOverride: false, computed: "Blocked" };
+  }
   const computed = computeOverallStatus({ ...data, responsibleOwner: data.responsibleParty }).status;
   const overrideValue = (formData.get("overallStatusOverride") as string || "").trim();
+  if (overrideValue && !allowOverride) {
+    throw new Error("Review permission is required to override overall readiness.");
+  }
   if (overrideValue && overrideValue !== computed) {
     return { overallStatus: overrideValue, overallStatusIsOverride: true, computed };
   }
   return { overallStatus: computed, overallStatusIsOverride: false, computed };
 }
 
-export async function createAction(formData: FormData) {
-  const org = await prisma.organisation.findFirst();
-  if (!org) throw new Error("No organisation found. Please run the seed script.");
+async function assertEntityScope(entityId: string | null, organisationId: string) {
+  if (!entityId) return;
+  const entity = await prisma.entity.findFirst({
+    where: { id: entityId, organisationId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!entity) throw new Error("Entity not found.");
+}
 
-  const data = parseActionForm(formData);
+export async function createAction(formData: FormData) {
+  const context = await requirePermission("record:write");
+
+  const data = initialControlledRecordState(parseActionForm(formData));
+  await assertEntityScope(data.entityId, context.orgId);
+  if (data.sourceDocumentId) await requireDocumentAccess(data.sourceDocumentId, "view", context);
   const { overallStatus, overallStatusIsOverride, computed } = resolveOverallStatus(data, formData);
 
-  const created = await prisma.action.create({
-    data: { organisationId: org.id, ...data, overallStatus, overallStatusIsOverride },
-  });
-
-  await prisma.auditEvent.create({
-    data: {
-      organisationId: org.id,
-      entityId: data.entityId,
-      actionId: created.id,
+  const created = await prisma.$transaction(async (tx) => {
+    const action = await tx.action.create({
+      data: {
+      organisationId: context.orgId,
+      ...data,
+      overallStatus,
+      overallStatusIsOverride,
+      createdById: context.userId,
+      lastUpdatedById: context.userId,
+      },
+    });
+    if (action.sourceDocumentId) {
+      await tx.documentRecordLink.createMany({
+        data: [{
+          organisationId: context.orgId,
+          documentId: action.sourceDocumentId,
+          actionId: action.id,
+          linkType: "Source",
+          pageReference: action.sourcePageParagraph,
+          createdById: context.userId,
+        }],
+        skipDuplicates: true,
+      });
+    }
+    await recordUserAuditEvent(context, {
       action: "ACTION_CREATED",
-      detail: JSON.stringify({ id: created.id, description: created.description }),
-    },
-  });
-
-  await recordOverallStatusRecalculated({
-    objectType: "Action", objectId: created.id, organisationId: org.id, entityId: data.entityId,
-    computedStatus: computed, storedStatus: overallStatus, wasOverridden: overallStatusIsOverride,
+      target: { objectType: "Action", objectId: action.id, entityId: action.entityId, actionId: action.id },
+      after: action,
+    }, tx);
+    await recordOverallStatusRecalculated({
+      objectType: "Action",
+      objectId: action.id,
+      organisationId: context.orgId,
+      entityId: action.entityId,
+      computedStatus: computed,
+      storedStatus: overallStatus,
+      wasOverridden: overallStatusIsOverride,
+      changedBy: context.userId,
+      tx,
+    });
+    return action;
   });
 
   revalidatePath("/actions-register");
@@ -129,42 +181,91 @@ export async function createAction(formData: FormData) {
 }
 
 export async function updateAction(id: string, formData: FormData) {
-  const org = await prisma.organisation.findFirst();
-  if (!org) throw new Error("No organisation found.");
-
-  const before = await prisma.action.findUnique({ where: { id } });
-  if (!before) throw new Error("Action not found.");
-
-  const data = parseActionForm(formData);
+  const context = await requirePermission("record:write");
+  const submitted = parseActionForm(formData);
+  await assertEntityScope(submitted.entityId, context.orgId);
+  if (submitted.sourceDocumentId) await requireDocumentAccess(submitted.sourceDocumentId, "view", context);
   const statusChangeReason = str(formData, "statusChangeReason");
-  const { overallStatus, overallStatusIsOverride, computed } = resolveOverallStatus(data, formData);
+  const canReview = hasPermission(context.user.role, "review:perform");
 
-  const updated = await prisma.action.update({
-    where: { id },
-    data: { ...data, overallStatus, overallStatusIsOverride },
-  });
-
-  await recordFieldChanges({
-    objectType: "Action", objectId: id, organisationId: org.id, entityId: data.entityId,
-    before: before as unknown as Record<string, unknown>, after: updated as unknown as Record<string, unknown>,
-    fields: TRACKED_FIELDS, changedBy: data.createdBy, reason: statusChangeReason,
-  });
-
-  if (before.overallStatus !== overallStatus) {
-    await recordOverallStatusRecalculated({
-      objectType: "Action", objectId: id, organisationId: org.id, entityId: data.entityId,
-      computedStatus: computed, storedStatus: overallStatus, wasOverridden: overallStatusIsOverride,
+  await prisma.$transaction(async (tx) => {
+    const before = await tx.action.findFirst({
+      where: { id, organisationId: context.orgId, deletedAt: null },
     });
-  }
-
-  await prisma.auditEvent.create({
-    data: {
-      organisationId: org.id,
+    if (!before) throw new Error("Action not found.");
+    const data = protectControlledRecordState(submitted, before, canReview);
+    const [blockingExceptions, blockingApprovals] = await Promise.all([
+      tx.exception.count({
+        where: {
+          actionId: id,
+          organisationId: context.orgId,
+          blocksFiling: true,
+          status: { in: ["Open", "In progress"] },
+        },
+      }),
+      tx.approval.count({
+        where: {
+          actionId: id,
+          organisationId: context.orgId,
+          status: { in: ["Pending", "Rejected"] },
+        },
+      }),
+    ]);
+    const { overallStatus, overallStatusIsOverride, computed } = resolveOverallStatus(
+      data,
+      formData,
+      blockingExceptions + blockingApprovals > 0,
+      canReview,
+    );
+    const updated = await tx.action.update({
+      where: { id },
+      data: { ...data, overallStatus, overallStatusIsOverride, lastUpdatedById: context.userId },
+    });
+    if (updated.sourceDocumentId) {
+      await tx.documentRecordLink.createMany({
+        data: [{
+          organisationId: context.orgId,
+          documentId: updated.sourceDocumentId,
+          actionId: updated.id,
+          linkType: "Source",
+          pageReference: updated.sourcePageParagraph,
+          createdById: context.userId,
+        }],
+        skipDuplicates: true,
+      });
+    }
+    await recordFieldChanges({
+      objectType: "Action",
+      objectId: id,
+      organisationId: context.orgId,
       entityId: data.entityId,
-      actionId: updated.id,
+      before: before as unknown as Record<string, unknown>,
+      after: updated as unknown as Record<string, unknown>,
+      fields: TRACKED_FIELDS,
+      changedBy: context.userId,
+      reason: statusChangeReason,
+      tx,
+    });
+    if (before.overallStatus !== overallStatus) {
+      await recordOverallStatusRecalculated({
+        objectType: "Action",
+        objectId: id,
+        organisationId: context.orgId,
+        entityId: data.entityId,
+        computedStatus: computed,
+        storedStatus: overallStatus,
+        wasOverridden: overallStatusIsOverride,
+        changedBy: context.userId,
+        tx,
+      });
+    }
+    await recordUserAuditEvent(context, {
       action: "ACTION_UPDATED",
-      detail: JSON.stringify({ id: updated.id, description: updated.description }),
-    },
+      target: { objectType: "Action", objectId: id, entityId: updated.entityId, actionId: id },
+      before,
+      after: updated,
+      reason: statusChangeReason,
+    }, tx);
   });
 
   revalidatePath(`/actions-register/${id}`);
@@ -175,54 +276,79 @@ export async function updateAction(id: string, formData: FormData) {
 }
 
 export async function archiveAction(id: string) {
-  const org = await prisma.organisation.findFirst();
-  const updated = await prisma.action.update({
-    where: { id },
-    data: { archivedAt: new Date() },
+  const context = await requirePermission("record:write");
+  const existing = await prisma.action.findFirst({
+    where: { id, organisationId: context.orgId, deletedAt: null },
   });
-
-  if (org) {
-    await prisma.auditEvent.create({
-      data: {
-        organisationId: org.id,
-        entityId: updated.entityId,
-        actionId: updated.id,
-        action: "ACTION_ARCHIVED",
-        detail: JSON.stringify({ id: updated.id, description: updated.description }),
-      },
+  if (!existing) throw new Error("Action not found.");
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.action.update({
+      where: { id },
+      data: { archivedAt: new Date(), lastUpdatedById: context.userId },
     });
-  }
+    await recordUserAuditEvent(context, {
+      action: "ACTION_ARCHIVED",
+      target: { objectType: "Action", objectId: id, entityId: updated.entityId, actionId: id },
+      before: existing,
+      after: updated,
+    }, tx);
+  });
 
   revalidatePath(`/actions-register/${id}`);
   revalidatePath("/actions-register");
 }
 
 export async function unarchiveAction(id: string) {
-  await prisma.action.update({
-    where: { id },
-    data: { archivedAt: null },
+  const context = await requirePermission("record:write");
+  const existing = await prisma.action.findFirst({
+    where: { id, organisationId: context.orgId, deletedAt: null },
+  });
+  if (!existing) throw new Error("Action not found.");
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.action.update({
+      where: { id },
+      data: { archivedAt: null, lastUpdatedById: context.userId },
+    });
+    await recordUserAuditEvent(context, {
+      action: "ACTION_RESTORED",
+      target: { objectType: "Action", objectId: id, entityId: updated.entityId, actionId: id },
+      before: existing,
+      after: updated,
+    }, tx);
   });
 
   revalidatePath(`/actions-register/${id}`);
   revalidatePath("/actions-register");
 }
 
-export async function deleteAction(id: string) {
-  const org = await prisma.organisation.findFirst();
-  const existing = await prisma.action.findUnique({ where: { id } });
+export async function deleteAction(id: string, formData: FormData) {
+  const context = await requirePermission("record:delete");
+  const reason = str(formData, "reason");
+  if (!reason) throw new Error("A deletion reason is required.");
+  const existing = await prisma.action.findFirst({
+    where: { id, organisationId: context.orgId, deletedAt: null },
+  });
+  if (!existing) throw new Error("Action not found.");
 
-  await prisma.action.delete({ where: { id } });
-
-  if (org && existing) {
-    await prisma.auditEvent.create({
+  await prisma.$transaction(async (tx) => {
+    const tombstone = await tx.action.update({
+      where: { id },
       data: {
-        organisationId: org.id,
-        entityId: existing.entityId,
-        action: "ACTION_DELETED",
-        detail: JSON.stringify({ id, description: existing.description }),
+        archivedAt: existing.archivedAt ?? new Date(),
+        deletedAt: new Date(),
+        deletedById: context.userId,
+        deletionReason: reason,
+        lastUpdatedById: context.userId,
       },
     });
-  }
+    await recordUserAuditEvent(context, {
+      action: "ACTION_TOMBSTONED",
+      target: { objectType: "Action", objectId: id, entityId: existing.entityId, actionId: id },
+      before: existing,
+      after: tombstone,
+      reason,
+    }, tx);
+  });
 
   revalidatePath("/actions-register");
   revalidatePath("/");

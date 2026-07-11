@@ -2,16 +2,23 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createAction } from "@/app/actions/actionsRegister";
 import { ActionForm } from "../_components/ActionForm";
+import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
 
 export default async function NewActionPage() {
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({
-        where: { organisationId: org.id },
-        orderBy: { legalName: "asc" },
-        select: { id: true, legalName: true },
-      })
-    : [];
+  const context = await requireOrg();
+  const [entities, documents] = await Promise.all([
+    prisma.entity.findMany({
+      where: { organisationId: context.orgId, deletedAt: null },
+      orderBy: { legalName: "asc" },
+      select: { id: true, legalName: true },
+    }),
+    prisma.document.findMany({
+      where: documentAccessWhere(context, "view"),
+      orderBy: { uploadedAt: "desc" },
+      select: { id: true, filename: true, versionNumber: true },
+    }),
+  ]);
 
   return (
     <>
@@ -28,8 +35,10 @@ export default async function NewActionPage() {
       <ActionForm
         action={createAction}
         entities={entities}
+        documents={documents}
         cancelHref="/actions-register"
         submitLabel="Create Action"
+        isNew
       />
     </>
   );

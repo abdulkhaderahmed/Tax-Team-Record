@@ -47,6 +47,13 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Confidential adviser and extraction benchmark corpora (never commit source documents)
+/Tax Compliance/
+/extraction-benchmark-corpus/
+/artifacts/tax-able/eval/extraction-benchmark/corpus/
+/artifacts/tax-able/eval/extraction-benchmark/private/
+/artifacts/tax-able/eval/extraction-benchmark/reports/
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 

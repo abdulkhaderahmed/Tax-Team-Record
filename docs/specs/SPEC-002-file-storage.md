@@ -1,6 +1,6 @@
 # SPEC-002 — Durable file storage for the document vault
 
-Status: ready · Owner: Devin · Depends on: SPEC-001 (for scoped access control)
+Status: driver and scoped application paths implemented; published storage, retention, purge and security operations remain parked/unproven · Depends on: SPEC-001
 
 ## Problem
 Uploads write to `process.cwd()/uploads/` on whichever container handled the request. The Replit published deployment runs a separate container from the workspace → files 404 in production. Documents are the product's raw material; silent loss is unacceptable.

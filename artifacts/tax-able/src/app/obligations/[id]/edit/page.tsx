@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { updateManualObligation } from "@/app/actions/manualObligations";
-import { ManualObligationForm, type ManualObligationFormValues } from "../../_components/ManualObligationForm";
+import { updateObligation } from "@/app/actions/obligations";
+import { ObligationForm, type ObligationFormValues } from "../../_components/ObligationForm";
 import { toDateInput } from "@/lib/obligations";
+import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
+import { hasPermission } from "@/lib/authz-policy";
 
 export default async function EditObligationPage({
   params,
@@ -11,22 +14,29 @@ export default async function EditObligationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const context = await requireOrg();
 
-  const ob = await prisma.manualObligation.findUnique({ where: { id } });
+  const ob = await prisma.obligation.findFirst({
+    where: { id, organisationId: context.orgId, deletedAt: null },
+  });
   if (!ob) notFound();
 
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({
-        where: { organisationId: org.id },
-        orderBy: { legalName: "asc" },
-        select: { id: true, legalName: true },
-      })
-    : [];
+  const [entities, documents] = await Promise.all([
+    prisma.entity.findMany({
+      where: { organisationId: context.orgId, deletedAt: null },
+      orderBy: { legalName: "asc" },
+      select: { id: true, legalName: true },
+    }),
+    prisma.document.findMany({
+      where: documentAccessWhere(context, "view"),
+      orderBy: { uploadedAt: "desc" },
+      select: { id: true, filename: true, versionNumber: true },
+    }),
+  ]);
 
-  const action = updateManualObligation.bind(null, id);
+  const action = updateObligation.bind(null, id);
 
-  const defaultValues: ManualObligationFormValues = {
+  const defaultValues: ObligationFormValues = {
     entityId: ob.entityId,
     regime: ob.regime,
     obligationType: ob.obligationType,
@@ -76,10 +86,9 @@ export default async function EditObligationPage({
     exceptionRequired: ob.exceptionRequired,
 
     sourceType: ob.sourceType,
+    sourceDocumentId: ob.sourceDocumentId,
     sourceDocumentReference: ob.sourceDocumentReference,
     sourcePageParagraph: ob.sourcePageParagraph,
-    createdBy: ob.createdBy,
-    lastUpdatedBy: ob.lastUpdatedBy,
   };
 
   return (
@@ -98,12 +107,14 @@ export default async function EditObligationPage({
         </div>
       </div>
 
-      <ManualObligationForm
+      <ObligationForm
         action={action}
         defaultValues={defaultValues}
         entities={entities}
+        documents={documents}
         cancelHref={`/obligations/${id}`}
         submitLabel="Save Changes"
+        canReviewControls={hasPermission(context.user.role, "review:perform")}
       />
     </>
   );

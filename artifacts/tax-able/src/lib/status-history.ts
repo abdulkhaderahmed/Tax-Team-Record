@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
+import type { Prisma } from "@prisma/client";
 
-export type TrackedObjectType = "ManualObligation" | "Action";
+export type TrackedObjectType = "Obligation" | "Action";
 
 const AUDIT_ACTION_MAP: Record<string, string> = {
   responsibleOwner: "responsible_owner_changed",
@@ -41,7 +42,7 @@ function normalize(value: unknown): string | null {
 /**
  * Diffs `before`/`after` on the given fields, writing a StatusHistory row and
  * a matching AuditEvent for every field that actually changed. Call this
- * after the record has already been saved.
+ * inside the same transaction as the record mutation whenever one is supplied.
  */
 export async function recordFieldChanges(params: {
   objectType: TrackedObjectType;
@@ -53,23 +54,26 @@ export async function recordFieldChanges(params: {
   fields: string[];
   changedBy: string | null;
   reason?: string | null;
+  tx?: Prisma.TransactionClient;
 }) {
-  const { objectType, objectId, organisationId, entityId, before, after, fields, changedBy, reason } = params;
+  const { objectType, objectId, organisationId, entityId, before, after, fields, changedBy, reason, tx } = params;
+  const db = tx ?? prisma;
 
   for (const field of fields) {
     const oldValue = normalize(before[field]);
     const newValue = normalize(after[field]);
     if (oldValue === newValue) continue;
 
-    await prisma.statusHistory.create({
-      data: { objectType, objectId, statusField: field, oldValue, newValue, changedBy, reason: reason ?? null },
+    await db.statusHistory.create({
+      data: { objectType, objectId, statusField: field, oldValue, newValue, changedById: changedBy, reason: reason ?? null },
     });
 
-    await prisma.auditEvent.create({
+    await db.auditEvent.create({
       data: {
         organisationId,
+        userId: changedBy,
         entityId,
-        manualObligationId: objectType === "ManualObligation" ? objectId : undefined,
+        obligationId: objectType === "Obligation" ? objectId : undefined,
         actionId: objectType === "Action" ? objectId : undefined,
         action: AUDIT_ACTION_MAP[field] ?? "field_changed",
         detail: `${field} changed from "${oldValue ?? "—"}" to "${newValue ?? "—"}"${reason ? ` — ${reason}` : ""}`,
@@ -86,13 +90,17 @@ export async function recordOverallStatusRecalculated(params: {
   computedStatus: string;
   storedStatus: string;
   wasOverridden: boolean;
+  changedBy?: string | null;
+  tx?: Prisma.TransactionClient;
 }) {
-  const { objectType, objectId, organisationId, entityId, computedStatus, storedStatus, wasOverridden } = params;
-  await prisma.auditEvent.create({
+  const { objectType, objectId, organisationId, entityId, computedStatus, storedStatus, wasOverridden, changedBy, tx } = params;
+  const db = tx ?? prisma;
+  await db.auditEvent.create({
     data: {
       organisationId,
+      userId: changedBy ?? null,
       entityId,
-      manualObligationId: objectType === "ManualObligation" ? objectId : undefined,
+      obligationId: objectType === "Obligation" ? objectId : undefined,
       actionId: objectType === "Action" ? objectId : undefined,
       action: "overall_status_recalculated",
       detail: wasOverridden
@@ -102,11 +110,12 @@ export async function recordOverallStatusRecalculated(params: {
   });
 
   if (wasOverridden && computedStatus !== "Complete" && storedStatus === "Complete") {
-    await prisma.auditEvent.create({
+    await db.auditEvent.create({
       data: {
         organisationId,
+        userId: changedBy ?? null,
         entityId,
-        manualObligationId: objectType === "ManualObligation" ? objectId : undefined,
+        obligationId: objectType === "Obligation" ? objectId : undefined,
         actionId: objectType === "Action" ? objectId : undefined,
         action: "completion_blocked_by_missing_status",
         detail: `Overall status was manually set to "Complete" despite outstanding requirements (computed status: "${computedStatus}").`,

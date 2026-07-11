@@ -16,15 +16,20 @@ export default async function EditPriorityRulePage({
 
   const { categoryId } = await params;
 
-  const [category, rule, sourceSystems] = await Promise.all([
+  const [category, rule, sourceSystems, users] = await Promise.all([
     prisma.dataCategory.findUnique({ where: { id: categoryId } }),
     prisma.sourcePriorityRule.findUnique({
       where: { organisationId_dataCategoryId: { organisationId: orgId, dataCategoryId: categoryId } },
-      include: { authSource: true, secondarySource: true, tertiarySource: true },
+      include: { authSource: true, secondarySource: true, tertiarySource: true, reviewOwner: true },
     }),
     prisma.sourceSystem.findMany({
       where: { organisationId: orgId, status: { not: "Archived" } },
       orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { organisationId: orgId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true },
     }),
   ]);
 
@@ -104,9 +109,13 @@ export default async function EditPriorityRulePage({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div className="form-row">
                 <label className="form-label">Review owner</label>
-                <input name="reviewOwner" className="form-input"
-                  defaultValue={rule?.reviewOwner ?? ""}
-                  placeholder="e.g. Alex Smith" />
+                <select name="reviewOwnerId" className="form-input"
+                  defaultValue={rule?.reviewOwnerId ?? ""}>
+                  <option value="">— unassigned —</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>{user.name} · {user.email} · {user.id}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-row">
                 <label className="form-label">Review frequency</label>

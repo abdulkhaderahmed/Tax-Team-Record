@@ -63,6 +63,7 @@ export type EntityFormValues = {
   isLargeCompany?: boolean;
   isVeryLargeCompany?: boolean;
   taxableProfitsBand?: string | null;
+  qipAssociatedCompanyCount?: number;
 
   vatRegistered?: boolean;
   vatRegistrationNumber?: string | null;
@@ -73,6 +74,10 @@ export type EntityFormValues = {
   hasEmi?: boolean;
   p11dRequired?: boolean;
   psaRequired?: boolean;
+  benefitsReportingMethod?: string;
+  hasLoansOrAccommodationBenefits?: boolean;
+  psaAgreementStatus?: string;
+  psaPaymentMethod?: string;
 
   rdClaimExpected?: boolean;
   rdNotificationNeeded?: boolean;
@@ -87,6 +92,7 @@ export type EntityFormValues = {
   lossesBroughtForward?: boolean;
   transferPricingRelevant?: boolean;
   hasPillar2?: boolean;
+  pillar2FirstReportingPeriod?: boolean;
 
   saoInScope?: boolean;
   ccoInScope?: boolean;
@@ -192,6 +198,12 @@ export function EntityForm({ action, defaultValues: d = {}, cancelHref, submitLa
               {CT_PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m || "— select —"}</option>)}
             </select>
           </div>
+          <div className="form-group">
+            <label htmlFor="qipAssociatedCompanyCount">Associated companies including self</label>
+            <input type="number" min="1" id="qipAssociatedCompanyCount" name="qipAssociatedCompanyCount"
+              defaultValue={d.qipAssociatedCompanyCount ?? 1} />
+            <div className="form-hint">Controls the QIP profit-threshold divisor for periods beginning on/after 1 April 2023.</div>
+          </div>
         </div>
 
         <div className="checkbox-grid" style={{ marginTop: 4 }}>
@@ -277,6 +289,30 @@ export function EntityForm({ action, defaultValues: d = {}, cancelHref, submitLa
             <span className="hint">(PAYE Settlement Agreement)</span>
           </div>
         </div>
+        <div className="form-grid" style={{ marginTop: 14 }}>
+          <div className="form-group">
+            <label htmlFor="benefitsReportingMethod">Benefits reporting method</label>
+            <select id="benefitsReportingMethod" name="benefitsReportingMethod" defaultValue={d.benefitsReportingMethod ?? "P11D"}>
+              <option>P11D</option><option>Voluntary payroll</option><option>Mandatory payroll</option><option>Mixed</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="psaAgreementStatus">PSA agreement status</label>
+            <select id="psaAgreementStatus" name="psaAgreementStatus" defaultValue={d.psaAgreementStatus ?? "Not in place"}>
+              <option>Not in place</option><option>Enduring</option><option>Amendment needed</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="psaPaymentMethod">PSA payment method</label>
+            <select id="psaPaymentMethod" name="psaPaymentMethod" defaultValue={d.psaPaymentMethod ?? "Electronic"}>
+              <option>Electronic</option><option>Non-electronic</option>
+            </select>
+          </div>
+          <div className="checkbox-row">
+            <input type="checkbox" id="hasLoansOrAccommodationBenefits" name="hasLoansOrAccommodationBenefits" defaultChecked={d.hasLoansOrAccommodationBenefits ?? false} />
+            <label htmlFor="hasLoansOrAccommodationBenefits">Loans or accommodation benefits present</label>
+          </div>
+        </div>
       </div>
 
       {/* ── 5. R&D ─────────────────────────────────────────── */}
@@ -353,6 +389,11 @@ export function EntityForm({ action, defaultValues: d = {}, cancelHref, submitLa
               defaultChecked={d.hasPillar2 ?? false} />
             <label htmlFor="hasPillar2">Pillar 2 in scope</label>
             <span className="hint">(global minimum tax)</span>
+          </div>
+          <div className="checkbox-row">
+            <input type="checkbox" id="pillar2FirstReportingPeriod" name="pillar2FirstReportingPeriod"
+              defaultChecked={d.pillar2FirstReportingPeriod ?? true} />
+            <label htmlFor="pillar2FirstReportingPeriod">First Pillar 2 reporting period</label>
           </div>
         </div>
       </div>

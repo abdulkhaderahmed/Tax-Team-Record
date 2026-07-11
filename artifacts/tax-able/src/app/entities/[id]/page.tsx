@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { fmtDate, MONTH_NAMES } from "@/lib/obligations";
 import { deleteEntity } from "@/app/actions/entities";
 import { generateEntityDrafts } from "@/app/actions/draftObligations";
+import { requireOrg } from "@/lib/auth";
 
 function GenerateButton({ entityId }: { entityId: string }) {
   const action = generateEntityDrafts.bind(null, entityId);
@@ -30,19 +31,40 @@ export default async function EntityDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const { orgId } = await requireOrg();
+  const now = new Date();
+  const horizon = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
-  const entity = await prisma.entity.findUnique({
-    where: { id },
+  const entity = await prisma.entity.findFirst({
+    where: { id, organisationId: orgId, deletedAt: null },
     include: {
-      _count: { select: { obligations: true } },
+      _count: {
+        select: {
+          obligations: {
+            where: { OR: [{ draftReviewStatus: null }, { draftReviewStatus: "activated" }] },
+          },
+        },
+      },
       obligations: {
         where: {
-          dueDate: { gte: new Date(), lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) },
+          archivedAt: null,
+          deletedAt: null,
+          AND: [
+            { OR: [{ draftReviewStatus: null }, { draftReviewStatus: "activated" }] },
+            { OR: [
+              { filingDeadline: { gte: now, lte: horizon } },
+              { paymentDeadline: { gte: now, lte: horizon } },
+              { internalTargetDate: { gte: now, lte: horizon } },
+            ] },
+          ],
         },
-        orderBy: { dueDate: "asc" },
+        orderBy: [{ filingDeadline: "asc" }, { paymentDeadline: "asc" }],
         take: 5,
-        include: { rule: true },
+        include: { ruleVersion: { include: { rule: true } } },
       },
+      group: true,
+      taxRegistrations: { orderBy: { registrationType: "asc" } },
+      accountingPeriods: { where: { status: "Confirmed" }, orderBy: { ctPeriodStart: "asc" } },
     },
   });
 
@@ -141,6 +163,10 @@ export default async function EntityDetailPage({
             <div className="detail-label">Taxable profits band</div>
             <div className="detail-value">{entity.taxableProfitsBand || "—"}</div>
           </div>
+          <div className="detail-item">
+            <div className="detail-label">Associated companies incl. self</div>
+            <div className="detail-value">{entity.qipAssociatedCompanyCount}</div>
+          </div>
         </div>
         <div className="flag-row" style={{ marginTop: 14 }}>
           {entity.isVeryLargeCompany && <span className="badge badge-purple">Very large (QIPs)</span>}
@@ -191,6 +217,14 @@ export default async function EntityDetailPage({
           <div className="detail-item">
             <div className="detail-label">PSA required</div>
             <div className="detail-value"><YesNo value={entity.psaRequired} /></div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Benefits reporting method</div>
+            <div className="detail-value">{entity.benefitsReportingMethod}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">PSA agreement status</div>
+            <div className="detail-value">{entity.psaAgreementStatus}</div>
           </div>
         </div>
       </div>
@@ -257,6 +291,18 @@ export default async function EntityDetailPage({
             <div className="detail-label">Pillar 2 in scope</div>
             <div className="detail-value"><YesNo value={entity.hasPillar2} /></div>
           </div>
+          <div className="detail-item">
+            <div className="detail-label">Entity group</div>
+            <div className="detail-value">{entity.group ? <Link href="/groups">{entity.group.name}</Link> : "—"}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="flex justify-between items-center"><h2>Tax registrations &amp; confirmed periods</h2><div className="flex gap8"><Link href="/registrations" className="btn btn-secondary btn-sm">Registrations</Link><Link href="/groups" className="btn btn-secondary btn-sm">Group structure</Link></div></div>
+        <div className="detail-grid">
+          <div className="detail-item"><div className="detail-label">Registrations</div><div className="detail-value">{entity.taxRegistrations.length ? entity.taxRegistrations.map((registration) => `${registration.registrationType}: ${registration.reference ?? registration.status}`).join(" · ") : "—"}</div></div>
+          <div className="detail-item"><div className="detail-label">Confirmed CT periods</div><div className="detail-value">{entity.accountingPeriods.length ? entity.accountingPeriods.map((period) => `${fmtDate(period.ctPeriodStart)} – ${fmtDate(period.ctPeriodEnd)}`).join(" · ") : "Using profile period; no separately verified records"}</div></div>
         </div>
       </div>
 
@@ -321,14 +367,26 @@ export default async function EntityDetailPage({
               </tr>
             </thead>
             <tbody>
-              {entity.obligations.map((ob) => (
-                <tr key={ob.id}>
-                  <td>{fmtDate(ob.dueDate)}</td>
-                  <td>{ob.title}</td>
-                  <td className="text-muted text-sm">{ob.period}</td>
-                  <td><span className="badge badge-grey">{ob.status}</span></td>
-                </tr>
-              ))}
+              {entity.obligations.map((ob) => {
+                const dueDate = ob.filingDeadline ?? ob.paymentDeadline ?? ob.internalTargetDate;
+                return (
+                  <tr key={ob.id}>
+                    <td>{dueDate ? fmtDate(dueDate) : "—"}</td>
+                    <td>
+                      <Link href={`/obligations/${ob.id}`}>{ob.description}</Link>
+                      {ob.ruleVersion && (
+                        <div className="text-muted text-sm">
+                          {ob.ruleVersion.rule.ruleKey} · v{ob.ruleVersion.version}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-muted text-sm">
+                      {ob.periodEnd ? `Ended ${fmtDate(ob.periodEnd)}` : "—"}
+                    </td>
+                    <td><span className="badge badge-grey">{ob.overallWorkflowStatus}</span></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -336,7 +394,7 @@ export default async function EntityDetailPage({
 
       {entity._count.obligations === 0 && (
         <div className="alert alert-info">
-          No obligations generated yet.{" "}
+          No obligations are on record yet.{" "}
           <Link href={`/entities/${entity.id}/obligations`}>
             Generate the obligations calendar →
           </Link>
@@ -347,11 +405,12 @@ export default async function EntityDetailPage({
       <div className="panel" style={{ borderColor: "var(--overdue)", marginTop: 8 }}>
         <h2>Danger zone</h2>
         <p className="text-sm text-muted">
-          Deleting this entity will permanently remove it and all its obligations. This cannot be undone.
+          Archive the entity from active registers. The entity and its audit trail remain recoverable.
         </p>
         <form action={deleteAction}>
+          <input name="reason" className="form-input" required placeholder="Reason for archiving" style={{ marginBottom: 8 }} />
           <button type="submit" className="btn btn-danger btn-sm">
-            Delete entity
+            Archive entity
           </button>
         </form>
       </div>

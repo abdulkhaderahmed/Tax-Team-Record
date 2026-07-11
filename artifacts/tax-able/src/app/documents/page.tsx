@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { requireOrg } from "@/lib/auth";
+import { documentAccessWhere } from "@/lib/authz";
 
 
 function fmt(d: Date | null) {
@@ -42,8 +43,8 @@ export default async function DocumentsPage({
 }: {
   searchParams: Promise<Record<string, string>>;
 }) {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
+  const context = await requireOrg();
+  const orgId = context.orgId;
 
   const sp = await searchParams;
   const filterType = sp.type || "";
@@ -53,15 +54,18 @@ export default async function DocumentsPage({
   const [documents, entities] = await Promise.all([
     prisma.document.findMany({
       where: {
-        organisationId: orgId,
+        AND: [documentAccessWhere(context), { deletedAt: null }],
         ...(filterType ? { documentType: filterType } : {}),
         ...(filterEntity ? { entityId: filterEntity } : {}),
         ...(filterStatus ? { status: filterStatus } : {}),
       },
-      include: { entity: { select: { legalName: true } } },
+      include: {
+        entity: { select: { legalName: true } },
+        uploadedBy: { select: { id: true, name: true } },
+      },
       orderBy: { uploadedAt: "desc" },
     }),
-    prisma.entity.findMany({ where: { organisationId: orgId }, orderBy: { legalName: "asc" } }),
+    prisma.entity.findMany({ where: { organisationId: orgId, deletedAt: null }, orderBy: { legalName: "asc" } }),
   ]);
 
   const totalHealthFlags = documents.length > 0
@@ -145,6 +149,9 @@ export default async function DocumentsPage({
                         {doc.versionLabel && (
                           <span style={{ marginLeft: 6, color: "var(--ink-secondary)", fontSize: 11 }}>v{doc.versionLabel}</span>
                         )}
+                        <div className="text-sm text-muted">
+                          Record v{doc.versionNumber} · uploaded by {doc.uploadedBy ? `${doc.uploadedBy.name} (${doc.uploadedBy.id})` : "legacy/system"}
+                        </div>
                       </td>
                       <td style={{ fontSize: 12 }}>{doc.documentType}</td>
                       <td style={{ fontSize: 12 }}>{doc.entity?.legalName || <span style={{ color: "var(--ink-tertiary)" }}>—</span>}</td>

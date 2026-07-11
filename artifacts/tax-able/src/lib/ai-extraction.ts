@@ -1,11 +1,21 @@
 "server only";
 
 import { getOpenAIClient } from "./openai-client";
-import { ExtractionResponseSchema, type ExtractionResponse } from "./extraction-schema";
+import {
+  ExtractionResponseSchema,
+  type ExtractionResponse,
+} from "./extraction-schema";
+import {
+  buildPageAwareBlocks,
+  formatPageAwareBlock,
+  type PageAwareBlock,
+  type SourcePage,
+} from "./page-aware-extraction";
+import { verifySourceReference } from "./source-verification";
 
 const MODEL = "gpt-4o";
-const PROMPT_VERSION = "1";
-const SCHEMA_VERSION = "1";
+const PROMPT_VERSION = "2";
+const SCHEMA_VERSION = "2";
 
 const SYSTEM_PROMPT = `You are a specialist UK tax review assistant. Your only job is to extract structured items from tax documents provided to you.
 
@@ -18,7 +28,9 @@ CRITICAL RULES:
 - Preserve uncertainty: if the source text is unclear, set a lower confidenceScore and note requiresHumanTaxReview: true.
 - Watch for conditional language: "subject to", "provided that", "assuming", "based on", "if", "unless", "may", "could", "where applicable". Any of these means isConditional: true.
 - Mark isDraft: true if the document appears to be a draft (e.g. contains [TBC], [insert], XX, draft headers).
-- Always populate sourceText with the relevant verbatim excerpt from the document.
+- Always populate sourceText with a relevant verbatim excerpt copied exactly from one supplied source block.
+- Always return that block's exact sourceBlockId and the one-based physical PDF sourcePageNumber. Use null only when the source block explicitly has no physical PDF page.
+- Never invent a page number. The server verifies every quote against the named block and page.
 
 Worked examples of preserving uncertainty:
 - "If the company is very large, QIPs may apply" → a conditional obligation item, conditionText: "Company is very large", NOT a definite QIP obligation.
@@ -39,16 +51,20 @@ Extract the following item types when present:
 
 Your response MUST be valid JSON matching the provided schema exactly. Do not add markdown, commentary, or explanation outside the JSON.`;
 
-function buildUserPrompt(text: string, documentType: string, entityContext: string): string {
+function buildUserPrompt(
+  block: PageAwareBlock,
+  blockIndex: number,
+  totalBlocks: number,
+  documentType: string,
+  entityContext: string,
+): string {
   return `Document type: ${documentType}
 ${entityContext ? `Entity context: ${entityContext}` : ""}
+Source block: ${blockIndex + 1} of ${totalBlocks}
 
-Document text:
----
-${text.slice(0, 40000)}
----
+${formatPageAwareBlock(block)}
 
-Extract all relevant items from this document. Return JSON only.`;
+Extract all relevant items supported by this source block. Copy sourceText verbatim and use the exact block ID and physical PDF page label shown above. Return JSON only.`;
 }
 
 // OpenAI's strict structured-output mode requires every object in the schema
@@ -62,10 +78,16 @@ const STR_N = { type: ["string", "null"] } as const;
 const BOOL = { type: "boolean" } as const;
 const BOOL_N = { type: ["boolean", "null"] } as const;
 const NUM = { type: "number" } as const;
-const STR_ARR_N = { type: ["array", "null"], items: { type: "string" } } as const;
+const INT_N = { type: ["integer", "null"] } as const;
+const STR_ARR_N = {
+  type: ["array", "null"],
+  items: { type: "string" },
+} as const;
 
 const BASE_PROPS = {
   sourceText: STR,
+  sourceBlockId: STR,
+  sourcePageNumber: INT_N,
   sourceChunkPage: STR_N,
   confidenceScore: NUM,
   isConditional: BOOL,
@@ -111,41 +133,88 @@ const RESPONSE_SCHEMA = {
           items: {
             anyOf: [
               itemBranch("obligation", {
-                regime: STR, obligationType: STR, description: STR,
-                filingDeadline: STR_N, paymentDeadline: STR_N, periodStart: STR_N, periodEnd: STR_N,
-                recurrence: STR_N, statutoryBasis: STR_N, evidenceRequired: STR_N, suggestedOwner: STR_N,
+                regime: STR,
+                obligationType: STR,
+                description: STR,
+                filingDeadline: STR_N,
+                paymentDeadline: STR_N,
+                periodStart: STR_N,
+                periodEnd: STR_N,
+                recurrence: STR_N,
+                statutoryBasis: STR_N,
+                evidenceRequired: STR_N,
+                suggestedOwner: STR_N,
               }),
               itemBranch("action", {
-                description: STR, responsibleParty: STR_N, accountableParty: STR_N, externalOwner: STR_N,
-                deadline: STR_N, relativeDeadlineTrigger: STR_N, relativeDeadlineOffset: STR_N, evidenceRequired: STR_N,
+                description: STR,
+                responsibleParty: STR_N,
+                accountableParty: STR_N,
+                externalOwner: STR_N,
+                deadline: STR_N,
+                relativeDeadlineTrigger: STR_N,
+                relativeDeadlineOffset: STR_N,
+                evidenceRequired: STR_N,
               }),
               itemBranch("assumption", {
-                assumptionStatement: STR, factCategory: STR_N,
-                relianceImportance: { type: "string", enum: ["Low", "Medium", "High", "Critical"] },
-                suggestedReviewCadence: STR_N, linkedCaveat: STR_N,
+                assumptionStatement: STR,
+                factCategory: STR_N,
+                relianceImportance: {
+                  type: "string",
+                  enum: ["Low", "Medium", "High", "Critical"],
+                },
+                suggestedReviewCadence: STR_N,
+                linkedCaveat: STR_N,
               }),
               itemBranch("caveat", {
-                caveatText: STR, relatedTopic: STR_N, relatedItem: STR_N, impactIfFalseOrUnresolved: STR_N,
+                caveatText: STR,
+                relatedTopic: STR_N,
+                relatedItem: STR_N,
+                impactIfFalseOrUnresolved: STR_N,
               }),
               itemBranch("tripwire", {
-                description: STR, triggerEvent: STR, reviewDateOrDeadline: STR_N, reviewCadence: STR_N, disarmCondition: STR_N,
+                description: STR,
+                triggerEvent: STR,
+                reviewDateOrDeadline: STR_N,
+                reviewCadence: STR_N,
+                disarmCondition: STR_N,
               }),
               itemBranch("evidence", {
-                description: STR, evidenceType: STR_N, linkedObligation: STR_N, owner: STR_N, deadline: STR_N,
+                description: STR,
+                evidenceType: STR_N,
+                linkedObligation: STR_N,
+                owner: STR_N,
+                deadline: STR_N,
               }),
               itemBranch("valuation", {
-                description: STR, assetOrShareClass: STR_N, valuationDate: STR_N, valuer: STR_N, purpose: STR_N,
+                description: STR,
+                assetOrShareClass: STR_N,
+                valuationDate: STR_N,
+                valuer: STR_N,
+                purpose: STR_N,
               }),
               itemBranch("rd", {
-                claimExpected: BOOL, claimNotificationMentioned: BOOL, aifMentioned: BOOL,
-                technicalEvidenceRequired: BOOL, adviserReviewRequired: BOOL, ct600LinkageMentioned: BOOL, notes: STR_N,
+                claimExpected: BOOL,
+                claimNotificationMentioned: BOOL,
+                aifMentioned: BOOL,
+                technicalEvidenceRequired: BOOL,
+                adviserReviewRequired: BOOL,
+                ct600LinkageMentioned: BOOL,
+                notes: STR_N,
               }),
               itemBranch("capital_allowances", {
-                farReviewRequired: BOOL, capexEvidenceRequired: BOOL, aiaMentioned: BOOL,
-                fullExpensingMentioned: BOOL, specialRatePoolMentioned: BOOL, ct600LinkageMentioned: BOOL, notes: STR_N,
+                farReviewRequired: BOOL,
+                capexEvidenceRequired: BOOL,
+                aiaMentioned: BOOL,
+                fullExpensingMentioned: BOOL,
+                specialRatePoolMentioned: BOOL,
+                ct600LinkageMentioned: BOOL,
+                notes: STR_N,
               }),
               itemBranch("conflict", {
-                description: STR, conflictingValues: STR_ARR_N, severityAssessment: STR_N, resolutionSuggestion: STR_N,
+                description: STR,
+                conflictingValues: STR_ARR_N,
+                severityAssessment: STR_N,
+                resolutionSuggestion: STR_N,
               }),
             ],
           },
@@ -166,42 +235,175 @@ export interface AIExtractionResult {
   apiError?: string;
 }
 
+function verifyResponseSources(
+  response: ExtractionResponse,
+  blocks: PageAwareBlock[],
+): ExtractionResponse {
+  const items = response.items.map((item) => {
+    const verified = verifySourceReference(
+      {
+        sourceBlockId: item.data.sourceBlockId,
+        sourcePageNumber: item.data.sourcePageNumber,
+        sourceText: item.data.sourceText,
+      },
+      blocks,
+    );
+    const sourceChunkPage =
+      verified.sourcePageNumber == null
+        ? `Document text block ${verified.sourceBlockId}`
+        : `PDF page ${verified.sourcePageNumber}`;
+
+    return {
+      ...item,
+      data: {
+        ...item.data,
+        sourceBlockId: verified.sourceBlockId,
+        sourcePageNumber: verified.sourcePageNumber,
+        sourceChunkPage,
+        sourceQuoteVerified: verified.valid,
+        confidenceScore: verified.valid
+          ? item.data.confidenceScore
+          : Math.min(item.data.confidenceScore, 0.49),
+        requiresSourceVerification:
+          item.data.requiresSourceVerification || !verified.valid,
+      },
+    };
+  }) as ExtractionResponse["items"];
+
+  return { ...response, items };
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, nested]) => [key, stableValue(nested)]),
+    );
+  }
+  return value;
+}
+
+function deduplicateExactItems(
+  items: ExtractionResponse["items"],
+): ExtractionResponse["items"] {
+  const byKey = new Map<string, ExtractionResponse["items"][number]>();
+  for (const item of items) {
+    const semanticData = { ...item.data } as Record<string, unknown>;
+    for (const key of [
+      "sourceText",
+      "sourceBlockId",
+      "sourcePageNumber",
+      "sourceChunkPage",
+      "sourceQuoteVerified",
+      "confidenceScore",
+      "requiresSourceVerification",
+    ]) {
+      delete semanticData[key];
+    }
+    const key = `${item.itemType}:${JSON.stringify(stableValue(semanticData))}`;
+    const existing = byKey.get(key);
+    const itemGrounded = item.data.sourceQuoteVerified === true;
+    const existingGrounded = existing?.data.sourceQuoteVerified === true;
+    if (
+      !existing ||
+      (itemGrounded && !existingGrounded) ||
+      (itemGrounded === existingGrounded &&
+        item.data.confidenceScore > existing.data.confidenceScore)
+    )
+      byKey.set(key, item);
+  }
+  return [...byKey.values()];
+}
+
 export async function runAIExtraction(
-  text: string,
+  source: SourcePage[] | string,
   documentType: string,
-  entityContext: string = ""
+  entityContext: string = "",
 ): Promise<AIExtractionResult> {
   const client = getOpenAIClient();
+  const pages: SourcePage[] =
+    typeof source === "string"
+      ? [{ pageNumber: null, text: source }]
+      : source.filter((page) => page.text.trim().length > 0);
+  const blocks = buildPageAwareBlocks(pages);
+  if (blocks.length === 0)
+    return { apiError: "Document has no readable text blocks." };
 
-  let rawJson: string | undefined;
-  try {
-    const completion = await client.chat.completions.create({
-      model: MODEL,
-      max_completion_tokens: 8192,
-      response_format: RESPONSE_SCHEMA as Parameters<typeof client.chat.completions.create>[0]["response_format"],
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user",   content: buildUserPrompt(text, documentType, entityContext) },
-      ],
-    });
+  const responses: ExtractionResponse[] = [];
+  const rawBlocks: Array<{ blockId: string; rawJson: string }> = [];
 
-    rawJson = completion.choices[0]?.message?.content ?? "";
-    if (!rawJson) return { apiError: "Empty response from AI model." };
+  for (let blockIndex = 0; blockIndex < blocks.length; blockIndex += 1) {
+    const block = blocks[blockIndex];
+    let rawJson: string | undefined;
+    try {
+      const completion = await client.chat.completions.create({
+        model: MODEL,
+        max_completion_tokens: 8192,
+        response_format: RESPONSE_SCHEMA as Parameters<
+          typeof client.chat.completions.create
+        >[0]["response_format"],
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: buildUserPrompt(
+              block,
+              blockIndex,
+              blocks.length,
+              documentType,
+              entityContext,
+            ),
+          },
+        ],
+      });
 
-    const parsed = JSON.parse(rawJson);
-    const validated = ExtractionResponseSchema.safeParse(parsed);
-    if (!validated.success) {
+      rawJson = completion.choices[0]?.message?.content ?? "";
+      if (!rawJson)
+        return {
+          rawJson,
+          apiError: `Empty response for source block ${block.id}.`,
+        };
+      rawBlocks.push({ blockId: block.id, rawJson });
+
+      const parsed = JSON.parse(rawJson);
+      const validated = ExtractionResponseSchema.safeParse(parsed);
+      if (!validated.success) {
+        return {
+          rawJson: JSON.stringify(rawBlocks),
+          validationError: `Source block ${block.id}: ${validated.error.issues
+            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+            .join("; ")}`,
+        };
+      }
+      responses.push(validated.data);
+    } catch (err) {
       return {
-        rawJson,
-        validationError: validated.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; "),
+        rawJson: JSON.stringify(rawBlocks),
+        apiError: `Source block ${block.id}: ${String(err)}`,
       };
     }
-    return { response: validated.data, rawJson };
-  } catch (err) {
-    return { rawJson, apiError: String(err) };
   }
+
+  const combined: ExtractionResponse = {
+    items: responses.flatMap((response) => response.items),
+    documentAppearsToBeFinished: responses.every(
+      (response) => response.documentAppearsToBeFinished,
+    ),
+    overallNotes:
+      responses
+        .map((response) => response.overallNotes?.trim())
+        .filter((note): note is string => Boolean(note))
+        .join("\n") || null,
+  };
+
+  const verified = verifyResponseSources(combined, blocks);
+
+  return {
+    response: { ...verified, items: deduplicateExactItems(verified.items) },
+    rawJson: JSON.stringify(rawBlocks),
+  };
 }
 
 export { MODEL, PROMPT_VERSION, SCHEMA_VERSION };

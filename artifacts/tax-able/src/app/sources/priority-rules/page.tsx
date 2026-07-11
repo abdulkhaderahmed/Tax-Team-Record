@@ -16,6 +16,7 @@ export default async function PriorityRulesPage() {
         authSource: true,
         secondarySource: true,
         tertiarySource: true,
+        reviewOwner: true,
       },
     }),
     prisma.sourceConflict.count({
@@ -52,7 +53,7 @@ export default async function PriorityRulesPage() {
         <div className="panel">
           <p style={{ color: "var(--ink-secondary)", marginBottom: 16, fontSize: 13 }}>
             For each data category, specify which source system is authoritative. When the selected source
-            is not authoritative, Tax-Able will show a warning and require an override reason.
+            is not authoritative, tax-able will show a warning and require an override reason.
           </p>
           <div className="table-scroll">
             <table className="data-table">
@@ -97,7 +98,7 @@ export default async function PriorityRulesPage() {
                           <span style={{ color: "var(--ink-tertiary)" }}>—</span>
                         )}
                       </td>
-                      <td>{rule?.reviewOwner || <span style={{ color: "var(--ink-tertiary)" }}>—</span>}</td>
+                      <td>{rule?.reviewOwner ? `${rule.reviewOwner.name} (${rule.reviewOwner.id})` : <span style={{ color: "var(--ink-tertiary)" }}>—</span>}</td>
                       <td>
                         <Link href={`/sources/priority-rules/${cat.id}`} className="btn">
                           {rule ? "Edit" : "Configure"}

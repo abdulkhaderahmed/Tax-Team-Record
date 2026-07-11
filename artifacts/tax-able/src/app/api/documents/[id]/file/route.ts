@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireOrg } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { documentContentType, getStorageDriver } from "@/lib/storage";
+import { requireDocumentAccess } from "@/lib/authz";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { organisation: org } = await requireOrg();
   const { id } = await params;
-  const doc = await prisma.document.findUnique({ where: { id } });
+  const { context } = await requireDocumentAccess(id, "view");
+  const doc = await prisma.document.findFirst({
+    where: { id, organisationId: context.orgId, deletedAt: null },
+  });
   if (!doc) return new NextResponse("Not found", { status: 404 });
-  if (doc.organisationId !== org.id) return new NextResponse("Not found", { status: 404 });
 
   let object;
   try {

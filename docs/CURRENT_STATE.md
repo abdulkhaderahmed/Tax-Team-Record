@@ -1,60 +1,68 @@
-# Current state — as of 2026-07-08
+# Current state — advice-to-control branch, 2026-07-11
 
-Source: live inspection of the Replit app ("Tax Team Record", repl `b1049bd0`), its git remote (`origin/main` = local `main` @ `9b9cf55 "Tax Register"`), and the Platform Strategy Pack (v1.0, 4 July 2026). Verify against code before relying on details.
+Source: direct inspection of the current branch's Prisma schema, routes, server actions, migration, rules engine and focused tests. This describes the repository implementation, not a production certification or a completed customer pilot.
 
-## What the product is
+## Status language
 
-**Tax-Able** (working name): system of record for in-house UK tax teams. Turns adviser deliverables into reviewed registers → registers into a statutory calendar → everything source-linked and auditable. Buyer: Head of Tax / CFO, UK corporates and UK branches of foreign groups. Core ICP: HMRC Large Business Directorate population (~2,000 groups) plus QIP-payers (~8–10k groups).
+- **Implemented** means a route, data model and guarded mutation path exist in this branch.
+- **Verified locally** means a focused automated check has passed against the branch.
+- **Unproven** means the design or code exists but has not met the stated operational, tax-content or customer-evidence gate.
+- **Parked** means deliberately outside this repair sprint, not accidentally omitted.
 
-## Built and working (deployed on Replit, `.replit.app`)
+## Product boundary
 
-| Module | Routes | Notes |
+Tax-Able is an **advice-to-control system of record** for an in-house UK tax team. It records why a tax requirement or adviser recommendation matters, who owns the resulting work, what evidence and approvals are required, and what remains blocking. It does not calculate a tax liability, submit a return or replace the filing engine.
+
+Two controlled intake paths feed the record:
+
+1. an entity profile and confirmed accounting periods are evaluated by approved, versioned UK rules to create human-reviewable obligation drafts; and
+2. an uploaded adviser document is extracted into candidates that remain in a review queue until an authenticated reviewer confirms or links them.
+
+Neither rules nor AI silently turn a change into a completed live control.
+
+## Implemented in this branch
+
+| Area | Routes / objects | Current implementation |
 |---|---|---|
-| Dashboard | `/` | Entity/obligation counts, upcoming deadlines, recent audit events |
-| Entity register | `/entities`, `/entities/[id]`, new/edit | Full UK tax profile: CT, VAT, payroll, R&D, capital allowances, governance |
-| Obligation register | `/obligations` (+ new/edit/detail), `/obligations/calendar`, `/obligations/drafts` | 7 workflow-status dimensions, evidence + risk fields, draft review/activate/reject/N-A |
-| Document vault | `/documents` (+ new/detail/edit), file download API | PDF/DOCX ≤15MB, text extraction (pdf-parse, mammoth), health-check flags (XX, TBC, [insert…], do/do not) |
-| AI extraction | `/documents/[id]/extraction/[runId]` | gpt-4o structured output, Zod-validated, 10 item types, per-run review UI, "create live obligation" |
-| Source systems | `/sources` (+ new/edit), data categories, priority rules, conflict log | ObligationSourceRef links obligations to sources |
-| Rules pack | `/rules`, `/rules-pack` | Seeded UK rules: CT600, VAT, P11D, ERS, QIPs; per-entity draft generation |
+| Identity and authorisation | Clerk middleware; internal `Organisation` and `User`; role/permission policy | Organisation-scoped reads and writes; roles from admin through viewer; destructive, review, approval and rule permissions; authenticated internal user IDs for reviewers, rule editors/reviewers, document uploaders and core record mutations. A demo fallback is used only when both Clerk keys are absent; partial configuration fails closed. |
+| Entity and structural facts | `/entities`, `/groups`, `/registrations`, `/periods`; `EntityGroup`, `EntityRelation`, `TaxRegistration`, `AccountingPeriod` | One entity profile, group/associated-company facts, registrations, reviewer-confirmed source dates and confirmed CT periods available to the generator. Confirmed periods cannot overlap and generation fails closed when a period-of-account is incomplete or discontinuous. A `RegimeAssessment` schema exists, but has no operating route/action yet. |
+| Controlled rules | `/rules-pack`, `/rule-impact`; `TaxRule`, `TaxRuleVersion`, `RuleCitation`, `RuleImpactReview` | Effective-dated versions with statutory links, authority/legal status, source-check date, editor, independent reviewer, rationale, supersession and an immutable deterministic-engine binding. Generation resolves the version effective for the relevant period/date and fails closed on gaps, overlaps or engine mismatch. Approval creates visible entity impact reviews and does not rewrite existing obligations. `/rules` is a legacy redirect only. |
+| Canonical obligation record | `/obligations`, drafts, calendar, detail, CSV import/export | One Prisma `Obligation` model and one generator path. Generated records retain the exact `TaxRuleVersion`, engine version and a stored “why this applies” trace; review activates, rejects or marks them not applicable. A database occurrence key prevents concurrent duplicate generation. The model maps to the existing physical `ManualObligation` table to preserve data during migration. |
+| Operating registers | `/actions-register`, `/assumptions`, `/caveats`, `/tripwires`, `/exceptions`, `/evidence`, `/data-requests`, `/approvals` | Organisation-scoped registers with real links between entity, obligation/action, source document and originating review item where applicable. Filing readiness is recomputed from unresolved blocking exceptions, evidence requirements or an approved evidence waiver, and the aggregate state of active approval gates. Requester/approver, evidence-owner/verifier and exception-owner/resolver separation is enforced. |
+| Daily view | `/` plus register queues | Dashboard counts filing blockers, overdue data requests, pending approvals, pending/running extraction and review work, alongside the 90-day obligation horizon. Data requests can store reminder and escalation records. |
+| Document control | `/documents`, document detail/version upload, protected file route | Storage abstraction, content hashes, explicit document versions/supersession, reliance and sensitivity metadata, independent source-verification timestamp/user, restricted-document grants, archive and reasoned tombstone controls. Ordinary editors cannot alter access, reliance or authority fields. Derived control records remain organisation-visible by policy, while restricted source identity, location, page context and audit snapshots are redacted without a document grant. |
+| AI-assisted intake | `/review`, per-run extraction view; `ExtractionRun`, `ReviewItem` | Physical-page PDF chunks, conditional OCR through Tesseract, deterministic 8–12k page-aware model blocks, quote/page grounding checks, persisted jobs with leases/retries/heartbeat, and a global review queue. Confirmed obligation, action, assumption, caveat, tripwire and evidence candidates create durable records and lineage links transactionally. A final no-record outcome requires an allowed disposition and reason. |
+| Audit and deletion | `/audit`; `AuditEvent`; record-level history | The organisation audit explorer stores authenticated user IDs, actor snapshots, target, reason and before/after JSON, and redacts restricted source context. Entity removal is a reasoned archive; obligation, action and document removal uses a reasoned tombstone rather than hard-deleting the business record. |
+| Spreadsheet coexistence | `/obligations/import`, `/api/exports/obligations` | Bounded CSV import with dry-run validation and organisation checks; export includes rule version, applicability rationale and source-document ID. CSV output protects against spreadsheet-formula injection. |
 
-## Stack
+## Verified locally
 
-Next.js 15 (App Router, server actions) · TypeScript strict · plain CSS (`globals.css`, **no Tailwind**) · Postgres (Replit-managed) + Prisma 5 · OpenAI SDK v6 (gpt-4o) + Zod · pdf-parse v2, mammoth v1 · no auth · local-filesystem uploads · deployed to Replit.
+The focused suite contains 69 passing tests:
 
-## Broken / half-finished (ranked by severity)
+- 39 rules and generator tests covering historical and incomplete CT periods, short/long CT periods, standard and QIP payment dates, controlled-version interval selection, engine mismatch, occurrence behaviour, PSA, the P11D 2027 transition's distinct review/applicability dates, R&D notification/AIF boundaries, and Pillar Two thresholds, deadlines and grouped-entity fail-closed handling;
+- 7 extraction-pipeline tests covering physical page preservation, OCR selection, tail-page processing beyond the former 40k-character boundary, stable blocks, citation correction/rejection and retry backoff;
+- 17 policy/audit tests covering role permissions, restricted-document grants and redaction, independent document decisions, complete-or-demo Clerk configuration, approval aggregation and separation of duties, structured audit validation, and protection of derived control states; and
+- 6 benchmark-framework tests covering the private fixture manifest, draft-inventory safety/labels, metric calculations, duplicate false positives and the prohibition on claims from unverified annotations.
 
-1. **No authentication.** Public URL, `ORG_ID = "demo-org"` hardcoded in every action/page. Blocks any real use. → `specs/SPEC-001-authentication.md`
-2. **Uploads don't persist in production.** Files write to `process.cwd()/uploads/`; the published container has a different filesystem → 404s. → `specs/SPEC-002-file-storage.md`
-3. **No global review queue.** Review only exists per extraction run; no `/review` across documents. → `specs/SPEC-003-global-review-queue.md`
-4. AI extraction runs synchronously in a server action — long docs will time out client-side. (Covered as a constraint in SPEC-003.)
-5. Confirmed actions/assumptions/tripwires have no live registers to promote into — only ManualObligations exist.
-6. No `/sources/[id]` read-only detail view (minor; edit page doubles as view).
-7. Single seeded org/user (Acme Tax Ltd); multi-tenancy waits on auth.
+Strict TypeScript checking, Prisma validation/client generation, the optimized Next.js production build and `git diff --check` pass. The build marks every organisation-scoped route as request-rendered, preventing demo-mode registers from freezing at build-time state. All 17 migrations were applied to a clean temporary PostgreSQL schema, the seed completed with 17 controlled rule versions and 31 citations, and the resulting schema had no drift from `schema.prisma`. The live development schema also has no drift and all applied migration checksums match the checked-in SQL.
 
-## Repo hygiene issues
+A production-server browser smoke test confirmed keyless demo startup, pending-draft exclusion from dashboard/calendar live counts, payment-only due-date display, exact controlled-rule/engine explanations, authenticated actor IDs in audit history, zero-duplicate regeneration, and creation of the P11D transition impact with distinct 5 April review due date and 6 April applicability date. No browser console errors were recorded. These checks do not prove deployed secrets, storage, queues or model calls in production.
 
-- `.next/` build cache is committed (hundreds of files; bloats every commit). Add to `.gitignore`.
-- `attached_assets/Pasted-*` — 5 raw feature-spec pastes committed at root; superseded by this docs tree.
-- Repo layout: app lives under `artifacts/tax-able/`, plus `artifacts/api-server/`, `artifacts/mockup-sandbox/`, `lib/`, `scripts/`. Consider flattening later; not urgent.
+## Still unproven
 
-## Environment facts that constrain planning
+1. **Real authentication deployment.** Clerk integration and fail-closed permissions exist, but production Clerk secrets, organisation claims, invitations, role administration, session behaviour and cross-organisation tests have not been exercised in the target deployment. The keyless demo fallback must never be mistaken for a production security mode.
+2. **Tax-content operating governance.** The controlled-content model, effective-date resolver, engine binding and independent rule approval exist. The initial rule content and code calculations still require named tax-professional ownership, a release cadence, retained review evidence and formal approval before reliance. VAT and ERS generation do not yet have the same golden-test depth as the prioritised rule families.
+3. **Application facts feeding complex rules.** The domain engine tests detailed QIP and Pillar Two logic, but the application generator still relies on confirmed profile flags for large/very-large and Pillar Two status. It does not yet collect the complete profit, liability, associated-company, four-period revenue, merger and special-regime evidence needed to determine those statuses itself. Where a Pillar Two entity belongs to a group, entity-level filing generation is withheld into an impact review because a group filing-member model and workflow do not yet exist.
+4. **Extraction accuracy.** The five real PDFs are identified by private hashes/page counts. A commit-safe, non-confidential draft concept inventory and evaluator now define material obligation/action recall, precision/false positives, condition preservation and citation metrics. Every corpus annotation remains `draft_unverified`; no prediction run has been scored against an independently reviewed gold set. The framework and pipeline tests are explicitly **not** an accuracy claim.
+5. **Operational automation.** Reminder/escalation rows, derived readiness and durable extraction worker code exist; no production scheduler, notification delivery channel, dead-letter operations, monitoring or service-level evidence has been proven. There is no automatic email/Teams/Slack chase loop.
+6. **Audit assurance.** The organisation audit explorer and restricted-source redaction exist, but no immutable external audit store, tamper-evident export or exhaustive production audit test has been proven. Older auxiliary mutation paths still need an event-by-event completeness review before formal control reliance.
+7. **External integrations and filing.** CSV is the only implemented exchange surface. ERP, payroll, Companies House/HMRC, adviser portals, calendar feeds and filing-engine integrations are parked. The product does not submit returns or payments.
+8. **Infrastructure and production assurance.** The object-storage adapter and migration exist, but production storage, backup/restore, retention, blob-purge policy, malware scanning, encryption/key management, observability, performance, disaster recovery and security testing are parked. A document tombstone does not currently purge its stored file. Applying a migration locally is not production deployment proof.
+9. **Customer value and operability.** No external pilot or two-cycle parallel run has yet demonstrated no missed material obligations, 95%+ page-accurate citations, lower calendar-maintenance effort or faster adviser-document triage. The expanded registers also need scenario testing with a 2–8 person team to show that the operating loop reduces work instead of creating duplicate administration.
 
-- Replit agent credits: exhausted or near-exhausted (user report, 2026-07-08). No Replit builds until topped up.
-- Figma: user seat is **view-only** (starter tier) — designs cannot be written into Figma. Design work ships as code/HTML + spec instead (see `DECISIONS.md` D-007).
-- No GitHub connector in the Cowork session; pushes go via user or Devin (see `../PUSH_INSTRUCTIONS.md`).
-- Devin (Ultra/max plan) available for autonomous implementation.
+## Immediate proof sequence when pilot preparation resumes
 
-## In flight (session 2026-07-09)
-
-Working directly in `artifacts/tax-able/` (app dir + package renamed from `quarterday`; see DECISIONS D-010). All changes below pass `tsc --noEmit`. Not yet committed/pushed.
-
-- **SPEC-001 (auth + org scoping): implemented.** Clerk deps, `src/middleware.ts`, sign-in/up routes, `ClerkProvider`, `src/lib/auth.ts` (`requireOrg`/`requireAdmin`). All hardcoded `ORG_ID`/`USER_ID` replaced with `requireOrg()`. Schema gained `Organisation.clerkOrgId` + `User.clerkUserId`; migration `20260709180500_add_clerk_org_user_ids` applied to the live Neon DB (via `db execute` + manual `_prisma_migrations` insert — Neon advisory-lock timeout blocks `migrate deploy`/`dev`). Runtime still needs real Clerk secrets (currently keyless mode).
-- **SPEC-002 (durable storage): core implemented.** `src/lib/storage.ts` driver (`putObject`/`getObjectStream`/`deleteObject`/`objectKey`) with Replit Object Storage + filesystem fallback (`STORAGE_DRIVER`). Upload streams to storage then commits DB (compensating delete on failure); download route is org-checked and streams from driver. Key scheme `orgs/{orgId}/documents/{docId}/{file}`. Backfill script `scripts/backfill-local-documents.ts`. Published-deploy download test still pending.
-- **SPEC-003 (review queue + background extraction): core implemented.** New `/review` global queue, nav badge + dashboard counts, `startExtraction` now queues (`Pending`) and runs `processExtractionRun` in-process (idempotent). Known v1 limit: no startup sweep for runs left `Running` after a crash.
-- **Design system: applied.** Inter via `next/font`; `globals.css` fully tokenised (no hex outside `:root`); shell restructured to sidebar-with-mark + active `NavLink`; removed double-`AppShell` wrapping on document/source pages. Explainers added under `docs/explainers/`.
-- Next: add Clerk secrets + claim keys, then run the SPEC exit-criteria tests (cross-org isolation, published upload/download, 30-page async extraction); commit app + docs; push to `origin main`.
-
-## Strategy pack (local folder, not in repo)
-
-`Platform Strategy Pack/` 01–08: corpus analysis of 5 Grant Thornton deliverables (evidence base), TAM (~2k core ICP groups), competitive landscape (ONESOURCE, Alphatax/Tax Systems, Materia), MVP spec, systems architecture, pitch deck, implementation-adjusted build plan, Replit execution checklist. The implementation-adjusted plan (doc 07) is the operative product boundary: **system of record first; AI never writes directly to registers.**
+1. Have a UK tax-content owner and independent reviewer approve the seeded rules and the entity facts required by each rule.
+2. Complete the private five-document gold set and report material obligation/action recall, false positives, condition preservation and page-accurate citation rates by document archetype.
+3. Run the product beside one friendly group's incumbent spreadsheet for two filing cycles; do not make the product the sole control until reconciliation is complete.
+4. Only then harden and verify production Clerk, storage, worker scheduling, monitoring and the first targeted integration chosen from the pilot's actual workflow.

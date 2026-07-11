@@ -42,3 +42,23 @@ Already wired and Zod-validated. Swapping now is churn without measurement.
 ## D-010 · 2026-07-09 · Working name is Tax-Able (resolves ROADMAP #7)
 The product/app working name is **Tax-Able**. Applied across the codebase: app package renamed `@workspace/quarterday` → `@workspace/tax-able`, directory `artifacts/quarterday` → `artifacts/tax-able`, infra config (`.replit`, `.replit-artifact/artifact.toml`, `.claude/launch.json`), UI copy, and docs. Verbatim historical prompt transcripts under `docs/history/` are left unchanged as records of what was actually written.
 **Counterfactual:** keeping "Quarterday" was rejected now that the name decision is made and design work is about to land in-app (renaming later would churn more surface). Reverses only if a trademark/availability check forces a different name — at which point the same swap runs again.
+
+## D-011 · 2026-07-11 · Advice-to-control record, not filing-engine replacement
+Tax-Able governs how entity facts, controlled rules and adviser documents become owned, evidenced and approved tax work. It does not calculate liabilities or submit returns. The maintained wedge is a system of record alongside Alphatax/ONESOURCE and the incumbent spreadsheet/file engine.
+**Counterfactual:** replacing filing software was rejected because calculation, e-filing and deep ERP integration would dilute the differentiator and raise reliance risk before customer proof. Reverses only after repeated pilots show a narrow filing capability is both demanded and safer to own.
+
+## D-012 · 2026-07-11 · Controlled content is executable only through a reviewed engine binding
+Rules are versioned, effective-dated content with primary links, editor/reviewer, rationale and supersession. Each approved version is immutably bound to the deterministic engine release it was reviewed against; generation fails closed on gaps, overlaps or mismatch and creates visible impact reviews rather than rewriting live records.
+**Counterfactual:** arbitrary editable JSON logic was rejected because it would be an untyped tax programming language without a safe authoring/test surface. Pure hard-coded rules were also rejected because they hide content governance inside deployments. Reverses when a typed rule DSL has schema validation, previews, golden tests and tax-professional approval for every operator.
+
+## D-013 · 2026-07-11 · Readiness is derived, not a freely editable status
+Approval, evidence, technical-review and filing-blocker outcomes are controlled through their own records and separation-of-duties checks. Generic record editing cannot assert or clear those outcomes; overall readiness is recomputed from the active gates.
+**Counterfactual:** free status dropdowns were rejected because they let a preparer bypass the very controls the register is meant to evidence. Reverses only for a narrowly defined override with explicit authority, rationale, audit event and no unresolved mandatory blocker.
+
+## D-014 · 2026-07-11 · Restricted sources are redacted; derived controls remain organisation-visible
+A restricted document requires a grant to expose its identity, file, page location, excerpt or source audit snapshot. The resulting obligation/action/register record remains visible to authorised organisation members so filing work is not hidden from its owners.
+**Counterfactual:** inheriting document ACLs onto every derived record was rejected for the initial operating model because it can make statutory work disappear from team queues. Reverses when a target customer demonstrates an ethical-wall use case requiring row-level restriction of the resulting tax analysis as well as the source.
+
+## D-015 · 2026-07-11 · Accuracy claims remain disabled until the five-document benchmark is gold
+The private corpus is represented by hashes/page counts and a commit-safe draft concept inventory. OCR, physical-page chunks, quote verification and the evaluator are implemented, but every annotation remains `draft_unverified`; no extraction-accuracy percentage may be marketed.
+**Counterfactual:** treating pipeline tests or model confidence as accuracy evidence was rejected because neither measures missed material advice, false positives, preserved conditions or page-citation correctness. Reverses only after independent annotation review and scored predictions meet the published gates.

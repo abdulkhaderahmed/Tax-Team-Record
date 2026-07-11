@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/nav";
 import { ClerkProvider } from "@clerk/nextjs";
+import { requireValidClerkConfiguration } from "@/lib/clerk-config";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tax-Able — Tax Obligations Register",
+  title: "tax-able — Tax Obligations Register",
   description: "In-house tax team system of record",
 };
 
@@ -20,13 +21,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <ClerkProvider>
-      <html lang="en" className={inter.variable}>
-        <body>
-          <AppShell>{children}</AppShell>
-        </body>
-      </html>
-    </ClerkProvider>
+  const content = (
+    <html lang="en" className={inter.variable}>
+      <body>
+        <AppShell>{children}</AppShell>
+      </body>
+    </html>
+  );
+
+  return requireValidClerkConfiguration(process.env) === "configured" ? (
+    <ClerkProvider>{content}</ClerkProvider>
+  ) : (
+    content
   );
 }

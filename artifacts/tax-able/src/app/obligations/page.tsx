@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { fmtDate } from "@/lib/obligations";
+import { fmtDate, obligationDueDate } from "@/lib/obligations";
 import { REGIMES, STATUS_VALUES, RISK_LEVELS } from "./_constants";
+import { requireOrg } from "@/lib/auth";
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date);
@@ -57,14 +58,16 @@ export default async function ObligationsPage({
   const sp = await searchParams;
   const showArchived = sp.archived === "1";
   const now = new Date();
+  const { orgId } = await requireOrg();
 
-  const org = await prisma.organisation.findFirst();
-  const entities = org
-    ? await prisma.entity.findMany({ where: { organisationId: org.id }, orderBy: { legalName: "asc" } })
-    : [];
+  const entities = await prisma.entity.findMany({
+    where: { organisationId: orgId, deletedAt: null },
+    orderBy: { legalName: "asc" },
+  });
 
-  const conditions: Prisma.ManualObligationWhereInput[] = [
-    { organisationId: org?.id ?? "" },
+  const conditions: Prisma.ObligationWhereInput[] = [
+    { organisationId: orgId },
+    { deletedAt: null },
     { archivedAt: showArchived ? { not: null } : null },
     // Exclude pending/rejected/N/A drafts — only show manually-created or activated obligations
     {
@@ -88,15 +91,24 @@ export default async function ObligationsPage({
       ],
     });
   }
-  if (sp.due === "overdue") conditions.push({ filingDeadline: { lt: now } });
-  else if (sp.due === "7d") conditions.push({ filingDeadline: { gte: now, lte: addDays(now, 7) } });
-  else if (sp.due === "30d") conditions.push({ filingDeadline: { gte: now, lte: addDays(now, 30) } });
-  else if (sp.due === "90d") conditions.push({ filingDeadline: { gte: now, lte: addDays(now, 90) } });
+  if (sp.due === "overdue") {
+    conditions.push({ OR: [{ filingDeadline: { lt: now } }, { paymentDeadline: { lt: now } }] });
+  } else if (sp.due === "7d") {
+    conditions.push({ OR: [{ filingDeadline: { gte: now, lte: addDays(now, 7) } }, { paymentDeadline: { gte: now, lte: addDays(now, 7) } }] });
+  } else if (sp.due === "30d") {
+    conditions.push({ OR: [{ filingDeadline: { gte: now, lte: addDays(now, 30) } }, { paymentDeadline: { gte: now, lte: addDays(now, 30) } }] });
+  } else if (sp.due === "90d") {
+    conditions.push({ OR: [{ filingDeadline: { gte: now, lte: addDays(now, 90) } }, { paymentDeadline: { gte: now, lte: addDays(now, 90) } }] });
+  }
 
-  const obligations = await prisma.manualObligation.findMany({
+  const obligations = await prisma.obligation.findMany({
     where: { AND: conditions },
-    include: { entity: { select: { id: true, legalName: true } } },
-    orderBy: [{ filingDeadline: "asc" }, { createdAt: "desc" }],
+    include: {
+      entity: { select: { id: true, legalName: true } },
+      ruleVersion: { include: { rule: true } },
+      _count: { select: { exceptions: true, evidenceItems: true, approvals: true } },
+    },
+    orderBy: [{ filingDeadline: "asc" }, { paymentDeadline: "asc" }, { createdAt: "desc" }],
     take: 250,
   });
 
@@ -111,7 +123,11 @@ export default async function ObligationsPage({
           </div>
           <h1>Obligation Register</h1>
         </div>
-        <Link href="/obligations/new" className="btn btn-primary">+ New Obligation</Link>
+        <div className="flex gap8">
+          <a href="/api/exports/obligations" className="btn btn-secondary">Export CSV</a>
+          <Link href="/obligations/import" className="btn btn-secondary">Import CSV</Link>
+          <Link href="/obligations/new" className="btn btn-primary">+ New Obligation</Link>
+        </div>
       </div>
 
       {/* Tab switcher */}
@@ -165,7 +181,7 @@ export default async function ObligationsPage({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--ink-secondary)", marginBottom: 3 }}>Filing due</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--ink-secondary)", marginBottom: 3 }}>Statutory due</label>
               <select name="due" defaultValue={sp.due ?? ""} style={{ fontSize: 12, padding: "5px 8px" }}>
                 <option value="">Any date</option>
                 <option value="overdue">Overdue</option>
@@ -248,7 +264,9 @@ export default async function ObligationsPage({
                 </tr>
               </thead>
               <tbody>
-                {obligations.map((ob) => (
+                {obligations.map((ob) => {
+                  const dueDate = obligationDueDate(ob);
+                  return (
                   <tr key={ob.id}>
                     <td>{ob.entity?.legalName ?? <span className="text-muted">—</span>}</td>
                     <td>
@@ -259,11 +277,21 @@ export default async function ObligationsPage({
                       <Link href={`/obligations/${ob.id}`} title={ob.description}>
                         {ob.description.length > 80 ? ob.description.slice(0, 80) + "…" : ob.description}
                       </Link>
+                      {ob.ruleVersion && (
+                        <div className="text-sm text-muted">
+                          {ob.ruleVersion.rule.ruleKey} · v{ob.ruleVersion.version}
+                        </div>
+                      )}
+                      {(ob._count.exceptions > 0 || ob._count.evidenceItems > 0 || ob._count.approvals > 0) && (
+                        <div className="text-sm text-muted">
+                          {ob._count.exceptions} exception(s) · {ob._count.evidenceItems} evidence · {ob._count.approvals} approvals
+                        </div>
+                      )}
                     </td>
                     <td>{ob.responsibleOwner ?? <span className="text-muted">—</span>}</td>
                     <td>{ob.accountableOwner ?? <span className="text-muted">—</span>}</td>
-                    <td className={dueDateClass(ob.filingDeadline)}>
-                      {ob.filingDeadline ? fmtDate(ob.filingDeadline) : <span className="text-muted">—</span>}
+                    <td className={dueDateClass(dueDate)}>
+                      {dueDate ? fmtDate(dueDate) : <span className="text-muted">—</span>}
                     </td>
                     <td>
                       {ob.riskLevel
@@ -307,7 +335,8 @@ export default async function ObligationsPage({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

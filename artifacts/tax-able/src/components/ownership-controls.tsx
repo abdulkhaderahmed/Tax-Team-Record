@@ -23,7 +23,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export interface OwnershipControlsData {
-  objectType: "ManualObligation" | "Action";
+  objectType: "Obligation" | "Action";
   objectId: string;
   returnPath: string;
 
@@ -59,7 +59,7 @@ export interface OwnershipControlsData {
   notes: string | null;
 
   raciAssignments: Array<{ id: string; role: string; party: { name: string; partyType: string; isExternal: boolean; email: string | null } }>;
-  statusHistory: Array<{ id: string; statusField: string; oldValue: string | null; newValue: string | null; changedBy: string | null; changedAt: Date; reason: string | null }>;
+  statusHistory: Array<{ id: string; statusField: string; oldValue: string | null; newValue: string | null; changedBy: { id: string; name: string } | null; changedAt: Date; reason: string | null }>;
 }
 
 export function OwnershipAndControls(data: OwnershipControlsData) {
@@ -169,7 +169,7 @@ export function OwnershipAndControls(data: OwnershipControlsData) {
                   <td>{h.statusField}</td>
                   <td>{h.oldValue ?? "—"}</td>
                   <td>{h.newValue ?? "—"}</td>
-                  <td>{h.changedBy ?? "—"}</td>
+                  <td>{h.changedBy ? `${h.changedBy.name} (${h.changedBy.id})` : "—"}</td>
                   <td className="text-sm text-muted">{h.changedAt.toLocaleString("en-GB")}</td>
                   <td className="text-sm text-muted">{h.reason ?? "—"}</td>
                 </tr>

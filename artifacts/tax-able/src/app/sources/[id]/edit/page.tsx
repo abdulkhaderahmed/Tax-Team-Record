@@ -3,6 +3,7 @@ import { updateSourceSystem, archiveSourceSystem } from "@/app/actions/sourceSys
 import { SYSTEM_TYPES, ACCESS_METHODS, SOURCE_SYSTEM_STATUSES } from "@/lib/source-constants";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { requireOrg } from "@/lib/auth";
 
 export default async function EditSourceSystemPage({
   params,
@@ -10,7 +11,8 @@ export default async function EditSourceSystemPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ss = await prisma.sourceSystem.findUnique({ where: { id } });
+  const { orgId } = await requireOrg();
+  const ss = await prisma.sourceSystem.findFirst({ where: { id, organisationId: orgId } });
   if (!ss) notFound();
 
   const update = updateSourceSystem.bind(null, id);

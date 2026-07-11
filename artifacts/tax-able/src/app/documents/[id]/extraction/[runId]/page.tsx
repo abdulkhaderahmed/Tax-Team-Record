@@ -4,14 +4,17 @@ import Link from "next/link";
 import { ITEM_TYPE_LABELS, type ItemType } from "@/lib/extraction-schema";
 import {
   updateReviewStatus,
-  editAndConfirmReviewItem,
+  editReviewItem,
+  finalizeReviewWithoutRecord,
   linkReviewItemToExisting,
   confirmItemAsObligation,
   confirmItemAsAction,
   confirmItemAsAssumption,
+  confirmItemAsCaveat,
+  confirmItemAsEvidence,
   confirmItemAsTripwire,
 } from "@/app/actions/extraction";
-import { requireOrg } from "@/lib/auth";
+import { requireDocumentAccess } from "@/lib/authz";
 
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
@@ -27,7 +30,7 @@ function StatusBadge({ status }: { status: string }) {
 function ReviewBadge({ status }: { status: string }) {
   const cls =
     status === "Confirmed" || status === "Edited and confirmed" ? "badge-green" :
-    status === "Rejected" || status === "Duplicate" || status === "Not applicable" ? "badge-grey" :
+    status === "Rejected" || status === "Duplicate" || status === "Not applicable" || status === "Reviewed - no record required" ? "badge-grey" :
     status === "Needs adviser input" || status === "Needs source verification" ? "badge-orange" :
     status === "In review" ? "badge-blue" :
     "badge-yellow";
@@ -55,7 +58,7 @@ function ItemTypeTag({ type }: { type: string }) {
 function StructuredFields({ json }: { json: unknown }) {
   if (!json || typeof json !== "object") return null;
   const obj = json as Record<string, unknown>;
-  const skip = new Set(["sourceText","sourceChunkPage","confidenceScore","isConditional","conditionText","isDraft","requiresHumanTaxReview","requiresSourceVerification"]);
+  const skip = new Set(["sourceText","sourceBlockId","sourcePageNumber","sourceChunkPage","sourceQuoteVerified","confidenceScore","isConditional","conditionText","isDraft","requiresHumanTaxReview","requiresSourceVerification"]);
   const entries = Object.entries(obj).filter(([k, v]) => !skip.has(k) && v !== null && v !== undefined && v !== "" && v !== false);
   if (entries.length === 0) return null;
   return (
@@ -77,18 +80,27 @@ function StructuredFields({ json }: { json: unknown }) {
 function ConfirmGuardrailFields({
   item,
   sourceIsAuthoritative,
+  linkingExisting = false,
 }: {
-  item: { confidenceScore: number; isConditional: boolean; conditionText: string | null };
+  item: {
+    confidenceScore: number;
+    isConditional: boolean;
+    conditionText: string | null;
+    requiresSourceVerification: boolean;
+  };
   sourceIsAuthoritative: boolean;
+  linkingExisting?: boolean;
 }) {
   const lowConfidence = item.confidenceScore < LOW_CONFIDENCE_THRESHOLD;
+  const needsSourceVerification =
+    item.requiresSourceVerification || !sourceIsAuthoritative;
   return (
     <>
-      {(lowConfidence || item.isConditional || !sourceIsAuthoritative) && (
+      {(lowConfidence || item.isConditional || needsSourceVerification) && (
         <div style={{ background: "var(--due-soon-bg)", border: "1px solid var(--due-soon)", borderRadius: 5, padding: 12, marginBottom: 12, fontSize: 12, color: "var(--due-soon)" }}>
           {lowConfidence && <div>⚠ Low confidence — a reviewer note is required to confirm this item.</div>}
           {item.isConditional && <div>⚠ Conditional item — the condition will be preserved unless you explicitly resolve it below.</div>}
-          {!sourceIsAuthoritative && <div>⚠ Non-authoritative source — verify the source or give an override reason below.</div>}
+          {needsSourceVerification && <div>⚠ Source verification is required — verify the source or give an override reason below.</div>}
         </div>
       )}
       <div className="form-row">
@@ -99,13 +111,18 @@ function ConfirmGuardrailFields({
       </div>
       {item.isConditional && (
         <div className="form-row">
+          {linkingExisting && (
+            <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input type="checkbox" name="conditionPreservedInLinkedRecord" /> The linked record preserves this condition
+            </label>
+          )}
           <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <input type="checkbox" name="resolveCondition" /> This condition no longer applies (requires a note)
           </label>
           <textarea name="conditionResolutionNote" className="form-input" rows={2} placeholder={`Why "${item.conditionText}" no longer applies...`} />
         </div>
       )}
-      {!sourceIsAuthoritative && (
+      {needsSourceVerification && (
         <div className="form-row">
           <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <input type="checkbox" name="sourceVerified" /> I have independently verified this source
@@ -122,32 +139,38 @@ export default async function ExtractionRunPage({
 }: {
   params: Promise<{ id: string; runId: string }>;
 }) {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
-
   const { id: documentId, runId } = await params;
+  const { context } = await requireDocumentAccess(documentId, "review");
+  const orgId = context.orgId;
 
   const [doc, run, entities] = await Promise.all([
-    prisma.document.findUnique({
-      where: { id: documentId },
+    prisma.document.findFirst({
+      where: { id: documentId, organisationId: orgId, deletedAt: null },
       select: { id: true, filename: true, organisationId: true, documentType: true, isAuthoritativeSource: true, sourceConfidence: true },
     }),
-    prisma.extractionRun.findUnique({
-      where: { id: runId },
+    prisma.extractionRun.findFirst({
+      where: { id: runId, documentId, organisationId: orgId },
       include: {
         items: { orderBy: [{ itemType: "asc" }, { confidenceScore: "desc" }] },
       },
     }),
-    prisma.entity.findMany({ where: { organisationId: orgId }, orderBy: { legalName: "asc" } }),
+    prisma.entity.findMany({ where: { organisationId: orgId, deletedAt: null }, orderBy: { legalName: "asc" } }),
   ]);
 
-  if (!doc || doc.organisationId !== orgId || !run) notFound();
+  if (!doc || !run) notFound();
 
   const sourceIsAuthoritative = doc.isAuthoritativeSource === "Yes";
   const items = run.items;
-  const needsReview = items.filter(i => i.reviewStatus === "Needs review" || i.reviewStatus === "In review").length;
-  const confirmed = items.filter(i => i.reviewStatus === "Confirmed" || i.reviewStatus === "Edited and confirmed").length;
-  const rejected = items.filter(i => ["Rejected","Duplicate","Not applicable"].includes(i.reviewStatus)).length;
+  const needsReview = items.filter(i =>
+    ["Needs review", "In review", "Needs adviser input", "Needs source verification"].includes(i.reviewStatus) ||
+    (["Confirmed", "Edited and confirmed"].includes(i.reviewStatus) && (!i.createdLiveObjectType || !i.createdLiveObjectId))
+  ).length;
+  const confirmed = items.filter(i =>
+    ["Confirmed", "Edited and confirmed"].includes(i.reviewStatus) && i.createdLiveObjectType && i.createdLiveObjectId
+  ).length;
+  const rejected = items.filter(i =>
+    ["Rejected", "Duplicate", "Not applicable", "Reviewed - no record required"].includes(i.reviewStatus)
+  ).length;
 
   // Group by item type
   const byType: Record<string, typeof items> = {};
@@ -243,14 +266,18 @@ export default async function ExtractionRunPage({
             </h2>
 
             {typeItems.map((item) => {
-              const isActionable = !["Confirmed","Edited and confirmed","Rejected","Duplicate","Not applicable"].includes(item.reviewStatus);
+              const hasLiveRecordLink = Boolean(item.createdLiveObjectType && item.createdLiveObjectId);
+              const confirmedWithRecord = ["Confirmed", "Edited and confirmed"].includes(item.reviewStatus) && hasLiveRecordLink;
+              const noRecordFinal = ["Rejected", "Duplicate", "Not applicable", "Reviewed - no record required"].includes(item.reviewStatus);
+              const isActionable = !confirmedWithRecord && !noRecordFinal;
               const data = item.structuredJson as Record<string, unknown>;
+              const needsSourceGuardrail = item.requiresSourceVerification || !sourceIsAuthoritative;
 
               return (
                 <div key={item.id} className="panel" style={{
                   marginBottom: 14,
                   borderLeft: `4px solid ${item.confidenceScore >= 0.75 ? "var(--on-track)" : item.confidenceScore >= 0.5 ? "var(--due-soon)" : "var(--overdue)"}`,
-                  opacity: ["Rejected","Duplicate","Not applicable"].includes(item.reviewStatus) ? 0.6 : 1,
+                  opacity: noRecordFinal ? 0.6 : 1,
                 }}>
                   {/* Item header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -302,17 +329,22 @@ export default async function ExtractionRunPage({
                   )}
                   {item.rejectionReason && (
                     <div style={{ marginTop: 4, fontSize: 12, color: "var(--overdue)" }}>
-                      <strong>Rejection reason:</strong> {item.rejectionReason}
+                      <strong>Disposition reason:</strong> {item.rejectionReason}
                     </div>
                   )}
                   {item.createdLiveObjectType && item.createdLiveObjectId && (
                     <div style={{ marginTop: 8 }}>
                       <span className="badge badge-green">
-                        ✓ {item.createdLiveObjectType === "ManualObligation" ? "Obligation" : item.createdLiveObjectType} created
+                        ✓ Durable {item.createdLiveObjectType} record linked
                       </span>
-                      {item.createdLiveObjectType === "ManualObligation" && (
+                      {item.createdLiveObjectType === "Obligation" && (
                         <Link href={`/obligations/${item.createdLiveObjectId}`} style={{ marginLeft: 8, fontSize: 12 }}>View →</Link>
                       )}
+                    </div>
+                  )}
+                  {["Confirmed", "Edited and confirmed"].includes(item.reviewStatus) && !hasLiveRecordLink && (
+                    <div className="alert alert-warning" style={{ marginTop: 8, fontSize: 12 }}>
+                      Legacy confirmed state has no durable record link. Create or link a record, or use a reviewed/no-record disposition with a reason.
                     </div>
                   )}
 
@@ -321,7 +353,7 @@ export default async function ExtractionRunPage({
                     <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--surface-sunken)" }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase", marginBottom: 10 }}>Review actions</div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                        {(["In review","Needs adviser input","Needs source verification","Duplicate","Not applicable"] as const).map((status) => {
+                        {(["In review","Needs adviser input","Needs source verification"] as const).filter((status) => status !== item.reviewStatus).map((status) => {
                           const action = updateReviewStatus.bind(null, item.id, status, undefined, undefined);
                           return (
                             <form key={status} action={action} style={{ display: "inline" }}>
@@ -331,57 +363,65 @@ export default async function ExtractionRunPage({
                         })}
                       </div>
 
-                      {/* Confirm (quick, no live object) */}
-                      {item.confidenceScore >= LOW_CONFIDENCE_THRESHOLD ? (
-                        <form action={updateReviewStatus.bind(null, item.id, "Confirmed", undefined, undefined)} style={{ display: "inline-block", marginRight: 8, marginBottom: 12 }}>
-                          <button type="submit" className="btn btn-primary btn-sm">Confirm item</button>
-                        </form>
-                      ) : (
-                        <details style={{ display: "inline-block", marginRight: 8, marginBottom: 12, verticalAlign: "top" }}>
-                          <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>Confirm item (low confidence) →</summary>
-                          <form
-                            action={async (formData: FormData) => {
-                              "use server";
-                              await updateReviewStatus(item.id, "Confirmed", (formData.get("reviewerNotes") as string) ?? "", undefined);
-                            }}
-                            style={{ marginTop: 8, background: "var(--surface-sunken)", padding: 12, borderRadius: 6, border: "1px solid var(--border)", minWidth: 260 }}
-                          >
-                            <textarea name="reviewerNotes" className="form-input" rows={2} required placeholder="Reviewer note (required)" />
-                            <button type="submit" className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>Confirm with note</button>
-                          </form>
-                        </details>
-                      )}
-
-                      {/* Reject (requires reason) */}
-                      <details style={{ display: "inline-block", marginRight: 8, marginBottom: 12, verticalAlign: "top" }}>
-                        <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--overdue)", fontWeight: 600 }}>Reject →</summary>
-                        <form
-                          action={async (formData: FormData) => {
-                            "use server";
-                            await updateReviewStatus(item.id, "Rejected", undefined, (formData.get("rejectionReason") as string) ?? "");
-                          }}
-                          style={{ marginTop: 8, background: "var(--surface-sunken)", padding: 12, borderRadius: 6, border: "1px solid var(--border)", minWidth: 260 }}
-                        >
-                          <input name="rejectionReason" className="form-input" required placeholder="Rejection reason (required)" />
-                          <button type="submit" className="btn btn-sm" style={{ marginTop: 8, color: "var(--overdue)", borderColor: "var(--overdue)" }}>Confirm rejection</button>
+                      {/* Final disposition without creating a live record */}
+                      <details style={{ marginBottom: 8 }}>
+                        <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--ink-secondary)", fontWeight: 600 }}>
+                          Close review without creating a record →
+                        </summary>
+                        <form action={finalizeReviewWithoutRecord.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)" }}>
+                          <div className="alert alert-warning" style={{ marginBottom: 12, fontSize: 12 }}>
+                            This is a final reviewed outcome. It will not create an obligation, action or other live control record.
+                          </div>
+                          <div className="form-row">
+                            <label className="form-label">Disposition <span style={{ color: "var(--overdue)" }}>*</span></label>
+                            <select name="reviewStatus" className="form-input" required defaultValue="Reviewed - no record required">
+                              <option value="Reviewed - no record required">Reviewed - no record required</option>
+                              <option value="Not applicable">Not applicable</option>
+                              <option value="Duplicate">Duplicate</option>
+                              <option value="Rejected">Rejected extraction</option>
+                            </select>
+                          </div>
+                          <div className="form-row">
+                            <label className="form-label">Disposition reason <span style={{ color: "var(--overdue)" }}>*</span></label>
+                            <textarea name="dispositionReason" className="form-input" rows={2} required placeholder="Why no durable live record is required" />
+                          </div>
+                          {item.isConditional && (
+                            <div className="form-row">
+                              <label className="form-label">How the condition was considered <span style={{ color: "var(--overdue)" }}>*</span></label>
+                              <textarea name="conditionDispositionNote" className="form-input" rows={2} required placeholder={`Explain how "${item.conditionText ?? "the source condition"}" affects this disposition`} />
+                            </div>
+                          )}
+                          {needsSourceGuardrail && (
+                            <div className="form-row">
+                              <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <input type="checkbox" name="sourceVerified" /> I independently verified the cited source
+                              </label>
+                              <textarea name="sourceOverrideReason" className="form-input" rows={2} placeholder="Or provide a specific rationale for making this final decision despite the source warning" />
+                            </div>
+                          )}
+                          <div className="form-row">
+                            <label className="form-label">Additional reviewer note</label>
+                            <textarea name="reviewerNotes" className="form-input" rows={2} />
+                          </div>
+                          <button type="submit" className="btn btn-secondary btn-sm">Save final no-record disposition</button>
                         </form>
                       </details>
 
-                      {/* Edit and confirm */}
+                      {/* Edit while keeping the item open */}
                       <details style={{ marginTop: 8, marginBottom: 8 }}>
-                        <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>Edit item and confirm →</summary>
-                        <form action={editAndConfirmReviewItem.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)" }}>
+                        <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>Edit item →</summary>
+                        <form action={editReviewItem.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)" }}>
                           <div className="form-row">
                             <label className="form-label">Summary</label>
                             <textarea name="plainSummary" className="form-input" rows={2} required defaultValue={item.plainSummary} />
                           </div>
                           <div className="form-row">
                             <label className="form-label">
-                              Reviewer note {item.confidenceScore < LOW_CONFIDENCE_THRESHOLD && <span style={{ color: "var(--overdue)" }}>* required (low confidence)</span>}
+                              Reviewer note
                             </label>
-                            <textarea name="reviewerNotes" className="form-input" rows={2} required={item.confidenceScore < LOW_CONFIDENCE_THRESHOLD} />
+                            <textarea name="reviewerNotes" className="form-input" rows={2} />
                           </div>
-                          <button type="submit" className="btn btn-primary btn-sm">Save edit and confirm</button>
+                          <button type="submit" className="btn btn-secondary btn-sm">Save edit and keep in review</button>
                         </form>
                       </details>
 
@@ -520,6 +560,40 @@ export default async function ExtractionRunPage({
                         </details>
                       )}
 
+                      {/* Create live caveat */}
+                      {item.itemType === "caveat" && (
+                        <details style={{ marginTop: 8 }}>
+                          <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>
+                            Create live caveat from this item →
+                          </summary>
+                          <form action={confirmItemAsCaveat.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Entity <span style={{ color: "var(--overdue)" }}>*</span></label>
+                                <select name="entityId" className="form-input" required>
+                                  <option value="">— select entity —</option>
+                                  {entities.map(e => <option key={e.id} value={e.id}>{e.legalName}</option>)}
+                                </select>
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Related topic</label>
+                                <input name="relatedTopic" className="form-input" defaultValue={(data.relatedTopic as string) ?? ""} />
+                              </div>
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Caveat <span style={{ color: "var(--overdue)" }}>*</span></label>
+                              <textarea name="caveatText" className="form-input" rows={2} required defaultValue={item.caveatText ?? item.plainSummary} />
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Impact if unresolved</label>
+                              <textarea name="impactIfUnresolved" className="form-input" rows={2} defaultValue={(data.impactIfUnresolved as string) ?? ""} />
+                            </div>
+                            <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} />
+                            <button type="submit" className="btn btn-primary btn-sm">Confirm and create caveat</button>
+                          </form>
+                        </details>
+                      )}
+
                       {/* Create live tripwire */}
                       {item.itemType === "tripwire" && (
                         <details style={{ marginTop: 8 }}>
@@ -565,26 +639,69 @@ export default async function ExtractionRunPage({
                         </details>
                       )}
 
+                      {/* Evidence and valuation reports are promoted as evidence, never obligations. */}
+                      {(item.itemType === "evidence" || item.itemType === "valuation") && (
+                        <details style={{ marginTop: 8 }}>
+                          <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>
+                            Create evidence record from this item →
+                          </summary>
+                          <form action={confirmItemAsEvidence.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Entity <span style={{ color: "var(--overdue)" }}>*</span></label>
+                                <select name="entityId" className="form-input" required>
+                                  <option value="">— select entity —</option>
+                                  {entities.map(e => <option key={e.id} value={e.id}>{e.legalName}</option>)}
+                                </select>
+                              </div>
+                              <div className="form-row" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Evidence type</label>
+                                <input name="evidenceType" className="form-input" defaultValue={(data.evidenceType as string) ?? (item.itemType === "valuation" ? "Valuation report" : "Document evidence")} />
+                              </div>
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Title <span style={{ color: "var(--overdue)" }}>*</span></label>
+                              <input name="title" className="form-input" required defaultValue={item.plainSummary} />
+                            </div>
+                            <div className="form-row">
+                              <label className="form-label">Description</label>
+                              <textarea name="description" className="form-input" rows={2} defaultValue={item.plainSummary} />
+                            </div>
+                            <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} />
+                            <div className="alert alert-warning" style={{ margin: "12px 0", fontSize: 12 }}>
+                              This creates an evidence record only; it does not infer a statutory obligation from a valuation report.
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-sm">Confirm and create evidence</button>
+                          </form>
+                        </details>
+                      )}
+
                       {/* Link to an existing live record instead of creating a new one */}
                       <details style={{ marginTop: 8 }}>
                         <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--ink-secondary)", fontWeight: 600 }}>
                           Link to an existing record →
                         </summary>
-                        <form action={linkReviewItemToExisting.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
-                          <div className="form-row" style={{ marginBottom: 0 }}>
-                            <label className="form-label">Record type</label>
-                            <select name="liveObjectType" className="form-input" required>
-                              <option value="ManualObligation">Obligation</option>
-                              <option value="Action">Action</option>
-                              <option value="Assumption">Assumption</option>
-                              <option value="Tripwire">Tripwire</option>
-                            </select>
+                        <form action={linkReviewItemToExisting.bind(null, item.id)} style={{ marginTop: 12, background: "var(--surface-sunken)", padding: 16, borderRadius: 6, border: "1px solid var(--border)" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginBottom: 12 }}>
+                            <div className="form-row" style={{ marginBottom: 0 }}>
+                              <label className="form-label">Record type</label>
+                              <select name="liveObjectType" className="form-input" required>
+                                <option value="Obligation">Obligation</option>
+                                <option value="Action">Action</option>
+                                <option value="Assumption">Assumption</option>
+                                <option value="Caveat">Caveat</option>
+                                <option value="Tripwire">Tripwire</option>
+                                <option value="Evidence">Evidence</option>
+                                <option value="Exception">Exception</option>
+                              </select>
+                            </div>
+                            <div className="form-row" style={{ marginBottom: 0 }}>
+                              <label className="form-label">Record ID</label>
+                              <input name="liveObjectId" className="form-input" required placeholder="Existing record ID" />
+                            </div>
                           </div>
-                          <div className="form-row" style={{ marginBottom: 0 }}>
-                            <label className="form-label">Record ID</label>
-                            <input name="liveObjectId" className="form-input" required placeholder="Existing record ID" />
-                          </div>
-                          <button type="submit" className="btn btn-secondary btn-sm">Link</button>
+                          <ConfirmGuardrailFields item={item} sourceIsAuthoritative={sourceIsAuthoritative} linkingExisting />
+                          <button type="submit" className="btn btn-primary btn-sm">Confirm and link record</button>
                         </form>
                       </details>
                     </div>

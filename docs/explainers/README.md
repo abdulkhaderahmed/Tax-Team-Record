@@ -1,9 +1,10 @@
 # Module explainers
 
-Seed explainers for code that predates the explainer standard. **Provenance:** written 2026-07-08 from a structured interrogation of the running app via the Replit agent, not from line-by-line code reading — verify details against source before load-bearing changes. Per-file explainers get generated when files are next touched (Sonnet-tier task; see `../EXPLAINER_STANDARD.md`).
+Module explainers for the product's main control boundaries. The advice-to-control, obligation/rules, extraction and document/source explainers were reconciled to source and local verification on 2026-07-11. Older design and infrastructure explainers retain their own provenance notes.
 
 | File | Covers |
 |---|---|
 | `extraction-pipeline.explainer.md` | Document → AI → review queue path |
 | `obligations-and-rules.explainer.md` | Obligation register + UK rules pack |
 | `documents-and-sources.explainer.md` | Document vault + source systems model |
+| `advice-to-control-operating-model.explainer.md` | End-to-end record graph, operating loop and trust boundary |

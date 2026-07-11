@@ -1,24 +1,41 @@
-# Document vault + source systems — module explainer
+# Document vault and sources — module explainer
 
 ## Purpose
-Two halves of "where did this number come from": the vault stores adviser deliverables with classification and quality flags; source systems model which system wins for each data type (the source-of-truth hierarchy from the implementation-adjusted plan §5.1).
 
-## Architecture
-**Vault:** upload (PDF/DOCX ≤15MB) → metadata (type, entity, security/sensitivity/privilege, reliance status) → text extraction stored → health-check markers scan for the corpus-derived defect signatures (`XX`, `TBC`, `[insert…]`, unresolved `do/do not`, stray `>`) → detail page surfaces flags + extraction runs → download API streams the original.
-**Sources:** source-system CRUD + data categories + per-category priority rules (e.g., Companies House > adviser doc for legal names; payroll > HR export for PAYE) + a conflict log with resolution workflow; `ObligationSourceRef` ties obligations to their sources.
-Invariant: reliance/privilege classification happens at ingestion, before anything downstream consumes the document.
+Preserve the evidence behind a tax control without turning an uploaded file into an unquestioned source of truth. The vault governs versions, access, reliance and verification; source-system registers govern which system is authoritative for a data category and how conflicts are resolved.
 
-## Methodology
-The health-check markers are the corpus analysis productised — every one of the five real GT deliverables failed at least one such check (wrong client name ×6 in one proposal; "do/do not" in a DocuSigned final). Cheap string-level checks that catch real, embarrassing defects before a reviewer relies on the document.
+## Document lifecycle
+
+Upload creates a versioned `Document` with content hash, storage key, uploader ID, classification, authority/reliance state and optional entity link. A later upload creates an explicit successor rather than overwriting history. Normal metadata editing cannot change security, restriction, authority, confidence or reliance fields.
+
+Separate controlled actions govern:
+
+- access/restriction changes, which require document-management permission and a reason;
+- positive reliance/authority review, which requires a review-capable user independent from the uploader/latest editor;
+- source verification, which also requires an independent reviewer and stores reviewer ID/date; and
+- archive/deletion, which creates a reasoned tombstone instead of deleting the business record.
+
+The protected file route checks organisation and document-level access before streaming from the storage abstraction. A tombstone currently preserves the stored blob; purge/retention policy remains parked infrastructure work.
+
+## Restriction policy
+
+Restricted documents use explicit grants for read, edit, review and access-management capabilities. Admin and Head of Tax roles can bypass grants by policy. Without access, the application redacts filename, document ID, page reference, excerpt, version link and relevant audit snapshots.
+
+The derived obligation/action/register record remains visible within the organisation. This prevents statutory work disappearing from operational queues, but it is not an ethical wall around the resulting analysis. D-014 records the condition under which this policy should change.
+
+## Provenance and source hierarchy
+
+Creation provenance stays on each live record. `DocumentRecordLink` supports multiple later sources with Source, Evidence, Corroborates or Contradicts semantics; `ReviewItemRecordLink` preserves which extracted candidate created or linked a record. Application validation and database constraints enforce organisation/entity coherence and exactly one target per link.
+
+The source-system module retains data categories, priority rules and conflict resolution. This is useful before integrations: it records why payroll, legal, Finance, Companies House or adviser evidence wins for a fact rather than leaving that decision in a spreadsheet note.
 
 ## Counterfactual analysis
-- *LLM-based document QA instead of marker strings*: richer detection, rejected for v1 — markers are deterministic, explainable ("flagged because the text contains 'TBC'"), and free; LLM QA can layer on later where markers are silent (numeric inconsistency like £2.19m vs £2.17m — genuinely needs it, note as Phase 2+ candidate).
-- *Priority rules as code*: rejected — same argument as rules pack; a head of tax must be able to read and override the hierarchy with a reason.
-- *Skipping source modelling until integrations exist*: tempting (no APIs yet), rejected because the *declaration* of source hierarchy is what makes manual data defensible today; integrations later inherit a ready model.
-Re-read: holds. Storage location is the module's real flaw — local filesystem, fixed by SPEC-002.
 
-## Known limitations & failure modes
-Production file loss (SPEC-002, severity 1); no OCR for scanned PDFs; numeric-inconsistency detection absent (markers are string-level); conflict log is manual-entry only — nothing auto-detects a conflict yet.
+- *Let any editor declassify or approve reliance*: rejected because editing the source and approving its use are different duties.
+- *Hide the entire derived record with the document*: rejected for the first operating model because it can hide filing work; reversible for demonstrated ethical-wall needs.
+- *Hard-delete records and files together*: rejected because audit history and retention obligations need an explicit disposition; eventual blob purge must be a policy-driven job.
+- *Single source foreign key only*: rejected because advice can be corroborated, contradicted or superseded by several documents.
 
-## Verification
-As-built confirmed via app interrogation 2026-07-08. Reviewer should re-verify: marker list completeness against `Platform Strategy Pack/01` defect inventory, and that download route enforces org scoping post SPEC-001.
+## Verified and unproven
+
+Policy tests cover grant semantics, restricted-source redaction and independent positive decisions. Browser/build verification covers the organisation-scoped vault routes. Production object storage, malware scanning, retention, blob purge, encryption/key operations, backup/restore and cross-organisation deployment tests remain unproven or parked.

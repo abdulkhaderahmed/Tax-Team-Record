@@ -1,16 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { updateDocument } from "@/app/actions/documents";
-import {
-  DOCUMENT_TYPES,
-  SENSITIVITY_LEVELS,
-  PRIVILEGE_STATUSES,
-  RELIANCE_STATUSES,
-  SOURCE_CONFIDENCE_LEVELS,
-  YES_NO_UNKNOWN,
-} from "@/lib/doc-constants";
+import { DOCUMENT_TYPES } from "@/lib/doc-constants";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireOrg } from "@/lib/auth";
+import { requireDocumentAccess } from "@/lib/authz";
 
 
 function dateVal(d: Date | null) {
@@ -23,16 +16,15 @@ export default async function EditDocumentPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { organisation: org } = await requireOrg();
-  const orgId = org.id;
-
   const { id } = await params;
+  const { context } = await requireDocumentAccess(id, "edit");
+  const orgId = context.orgId;
   const [doc, entities, sourceSystems] = await Promise.all([
-    prisma.document.findUnique({ where: { id } }),
+    prisma.document.findFirst({ where: { id, organisationId: orgId, deletedAt: null } }),
     prisma.entity.findMany({ where: { organisationId: orgId }, orderBy: { legalName: "asc" } }),
     prisma.sourceSystem.findMany({ where: { organisationId: orgId, status: { not: "Archived" } }, orderBy: { name: "asc" } }),
   ]);
-  if (!doc || doc.organisationId !== orgId) notFound();
+  if (!doc) notFound();
 
   const save = updateDocument.bind(null, id);
 
@@ -95,82 +87,8 @@ export default async function EditDocumentPage({
             </div>
           </div>
 
-          {/* Security */}
-          <div className="panel" style={{ marginBottom: 20 }}>
-            <h2>Security &amp; sensitivity</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <div className="form-row">
-                <label className="form-label">Sensitivity level</label>
-                <select name="sensitivityLevel" className="form-input" defaultValue={doc.sensitivityLevel}>
-                  {SENSITIVITY_LEVELS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Privilege status</label>
-                <select name="privilegeStatus" className="form-input" defaultValue={doc.privilegeStatus}>
-                  {PRIVILEGE_STATUSES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Contains personal data?</label>
-                <select name="containsPersonalData" className="form-input" defaultValue={doc.containsPersonalData}>
-                  {YES_NO_UNKNOWN.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Contains special category data?</label>
-                <select name="containsSpecialCategory" className="form-input" defaultValue={doc.containsSpecialCategory}>
-                  {YES_NO_UNKNOWN.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Contains payroll data?</label>
-                <select name="containsPayrollData" className="form-input" defaultValue={doc.containsPayrollData}>
-                  {YES_NO_UNKNOWN.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Contains M&amp;A / restructuring data?</label>
-                <select name="containsMaData" className="form-input" defaultValue={doc.containsMaData}>
-                  {YES_NO_UNKNOWN.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 4, marginBottom: 16 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                <input type="checkbox" name="restrictedAccess" value="true" defaultChecked={doc.restrictedAccess} />
-                Restricted access
-              </label>
-            </div>
-            <div className="form-row" style={{ marginBottom: 0 }}>
-              <label className="form-label">Access notes</label>
-              <textarea name="accessNotes" className="form-input" rows={2} defaultValue={doc.accessNotes ?? ""} />
-            </div>
-          </div>
-
-          {/* Reliance */}
-          <div className="panel" style={{ marginBottom: 24 }}>
-            <h2>Source &amp; reliance</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-              <div className="form-row">
-                <label className="form-label">Reliance status</label>
-                <select name="relianceStatus" className="form-input" defaultValue={doc.relianceStatus}>
-                  {RELIANCE_STATUSES.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Is authoritative source?</label>
-                <select name="isAuthoritativeSource" className="form-input" defaultValue={doc.isAuthoritativeSource}>
-                  {YES_NO_UNKNOWN.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Source confidence</label>
-                <select name="sourceConfidence" className="form-input" defaultValue={doc.sourceConfidence}>
-                  {SOURCE_CONFIDENCE_LEVELS.map((v) => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-            </div>
+          <div className="alert alert-info" style={{ marginBottom: 24 }}>
+            Access restrictions and security classifications are controlled on the document page by an access manager. Source authority and reliance are decided there by an independent reviewer.
           </div>
 
           <div style={{ display: "flex", gap: 12 }}>
