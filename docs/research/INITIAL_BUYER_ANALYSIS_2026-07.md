@@ -1,11 +1,11 @@
-# Quarterday initial buyer analysis
+# Tax-Able initial buyer analysis
 
 **Date:** 25 July 2026  
 **Question:** Which stakeholder and company segment offers the strongest first market for an adviser-advice-to-tax-decision product?
 
 ## Decision
 
-Quarterday should sell to the **Head of Tax**.
+Tax-Able should sell to the **Head of Tax**.
 
 - **Economic buyer and accountable owner:** Head of Tax or Group Head of Tax
 - **Daily champion and principal user:** Tax Manager or Senior Tax Manager
@@ -51,7 +51,7 @@ Scores use a one-to-five scale. The weighting represents the needs of an early w
 
 ### Head of Tax
 
-The Head of Tax owns the consequences Quarterday is designed to control:
+The Head of Tax owns the consequences Tax-Able is designed to control:
 
 - advice reaches Tax too late;
 - conditions in adviser reports are lost during implementation;
@@ -66,7 +66,7 @@ This person can explain the loss, identify the first use case and sponsor adopti
 
 The Tax Manager experiences the highest daily friction. This person will judge whether the product saves time or creates administration. The role is an excellent design partner and internal champion.
 
-Purchase authority is the constraint. A Tax Manager can introduce Quarterday, populate it and prove its use. The Head of Tax normally has to approve the change and defend the spend.
+Purchase authority is the constraint. A Tax Manager can introduce Tax-Able, populate it and prove its use. The Head of Tax normally has to approve the change and defend the spend.
 
 The product should therefore optimise the working experience for the Tax Manager while making the value visible to the Head of Tax.
 
@@ -133,7 +133,7 @@ Sources:
 
 The Thomson Reuters 2026 Corporate Tax Technology Report surveyed 170 tax leaders, with a strong North American bias. Only 27% said they could obtain the budget and resources they needed when needed; 34% said budget and implementation resources were both constrained.
 
-This makes a light first deployment commercially important. Quarterday should accept one adviser document and create a useful matter before requesting entity, registration or source-system setup.
+This makes a light first deployment commercially important. Tax-Able should accept one adviser document and create a useful matter before requesting entity, registration or source-system setup.
 
 Source:
 
@@ -143,7 +143,7 @@ Source:
 
 HMRC’s Business Risk Review guidance asks whether a large business has adequate systems, processes and tax resources. It treats robust systems and a tax risk and controls matrix as indicators of a sustainable compliance process.
 
-Quarterday can support that operating evidence. It should avoid claiming that use of the product proves a legal treatment or guarantees a favourable risk rating.
+Tax-Able can support that operating evidence. It should avoid claiming that use of the product proves a legal treatment or guarantees a favourable risk rating.
 
 Source:
 
@@ -222,7 +222,7 @@ The fictional workspace should represent:
 - a three-person in-house tax team;
 - regular external adviser reports;
 - existing compliance and filing tools;
-- advice implementation managed through email, documents and spreadsheets before Quarterday.
+- advice implementation managed through email, documents and spreadsheets before Tax-Able.
 
 The first demo action should be **upload adviser advice**.
 

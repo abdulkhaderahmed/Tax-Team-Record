@@ -50,6 +50,8 @@ Thumbs.db
 
 # Confidential adviser and extraction benchmark corpora (never commit source documents)
 /Tax Compliance/
+# Runtime document vault — holds client documents uploaded through the app
+/artifacts/tax-able/uploads/
 /extraction-benchmark-corpus/
 /artifacts/tax-able/eval/extraction-benchmark/corpus/
 /artifacts/tax-able/eval/extraction-benchmark/private/

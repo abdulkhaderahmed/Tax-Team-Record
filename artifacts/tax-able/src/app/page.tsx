@@ -507,40 +507,40 @@ export default async function DashboardPage() {
                 ))}
                 {data.isGuidedDemo && (
                   <>
-                    <div className="hq-matter-row hq-matter-row-static">
+                    <Link className="hq-matter-row" href="/demo/incentive-plan">
                       <span className="hq-matter-identity">
                         <span className="hq-matter-icon employment">ET</span>
                         <span>
-                          <strong>PAYE settlement agreement 2025/26</strong>
-                          <small>Employment tax · Northstar Group</small>
+                          <strong>Management incentive plan</strong>
+                          <small>Incentives &amp; reward · Northstar Operations Ltd</small>
                         </span>
                       </span>
                       <span className="hq-matter-detail">
                         <small>Next decision</small>
-                        <strong>Approve population and gross-up basis</strong>
+                        <strong>Close 7 coverage gaps across 4 parties</strong>
                       </span>
                       <span className="hq-matter-status">
-                        <span className="response-state">Finance overdue</span>
-                        <small>Due 28 Jul</small>
+                        <span className="response-state">7 events live</span>
+                        <small>Next clock 14 days</small>
                       </span>
-                    </div>
-                    <div className="hq-matter-row hq-matter-row-static">
+                    </Link>
+                    <Link className="hq-matter-row" href="/demo/positions">
                       <span className="hq-matter-identity">
-                        <span className="hq-matter-icon hmrc">HM</span>
+                        <span className="hq-matter-icon hmrc">TX</span>
                         <span>
-                          <strong>HMRC information request</strong>
-                          <small>Corporation tax · Northstar Services Ltd</small>
+                          <strong>Open tax positions</strong>
+                          <small>Transactions · shareholder elections and conditions</small>
                         </span>
                       </span>
                       <span className="hq-matter-detail">
                         <small>Next decision</small>
-                        <strong>Review draft response and evidence pack</strong>
+                        <strong>19 shareholders with election windows open</strong>
                       </span>
                       <span className="hq-matter-status">
-                        <span className="response-state accepted">On track</span>
-                        <small>Due 2 Aug</small>
+                        <span className="response-state">Funding short</span>
+                        <small>Earliest closes Jan 2027</small>
                       </span>
-                    </div>
+                    </Link>
                   </>
                 )}
               </div>

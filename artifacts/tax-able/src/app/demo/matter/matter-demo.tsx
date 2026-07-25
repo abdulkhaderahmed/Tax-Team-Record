@@ -139,11 +139,8 @@ export function MatterDemo() {
       <div className="matter-demo-banner">
         <div>
           <span className="matter-demo-dot" />
-          <strong>Northstar Group · fictional workspace</strong>
-          <span>
-            £430m UK private group · 14 active entities · 3-person tax team.
-            This matter began with one valuation report and a Legal email.
-          </span>
+          <strong>Northstar Group · sample workspace</strong>
+          <span>£430m UK private group · 14 entities · 3-person tax team</span>
         </div>
         <button onClick={resetDemo} type="button">
           Reset
@@ -177,7 +174,7 @@ export function MatterDemo() {
           </div>
           <p>
             Northstar Operations Ltd · Board approval 31 July 2026 · Tax owner:
-            You, Head of Tax
+            You, Head of Tax · 1 report, 1 email, 3 cited conditions
           </p>
         </div>
         <div className="matter-heading-actions">
@@ -189,24 +186,6 @@ export function MatterDemo() {
           </button>
         </div>
       </header>
-
-      <div className="matter-intake-summary">
-        <div className="intake-summary-copy">
-          <span className="intake-spark">✦</span>
-          <div>
-            <strong>Matter brief prepared automatically</strong>
-            <p>
-              11 fields were prefilled. Tax judgement is required for three
-              conditions before the transaction can proceed.
-            </p>
-          </div>
-        </div>
-        <div className="intake-sources">
-          <span>1 report</span>
-          <span>1 email</span>
-          <span>3 cited conditions</span>
-        </div>
-      </div>
 
       <nav aria-label="Matter sections" className="matter-tabs">
         {tabs.map((tab) => (
@@ -232,10 +211,7 @@ export function MatterDemo() {
               }`}
             >
               <div className="decision-panel-top">
-                <div>
-                  <span className="matter-kicker">Decision required</span>
-                  <h2>Can Tax release the transaction for board approval?</h2>
-                </div>
+                <h2>Can Tax release the transaction for board approval?</h2>
                 <span className="decision-id">DEC-2026-014</span>
               </div>
 
@@ -269,13 +245,8 @@ export function MatterDemo() {
                         ? "Decision recorded"
                         : ready
                           ? "All conditions evidenced"
-                          : `${checks.length - acceptedCount} control checks need your acceptance`}
+                          : `${checks.length - acceptedCount} checks to accept`}
                     </strong>
-                    <p>
-                      {approved
-                        ? "The decision, conditions, evidence and approver are retained together."
-                        : "Responses have arrived. Review each one before sign-off."}
-                    </p>
                   </div>
                 </div>
                 {approved ? (
@@ -297,22 +268,13 @@ export function MatterDemo() {
                   </button>
                 )}
               </div>
-              {!ready && !approved && (
-                <p className="decision-disabled-reason">
-                  Approval becomes available when all three control checks are
-                  accepted.
-                </p>
-              )}
             </section>
 
             <section className="matter-section">
               <div className="matter-section-heading">
-                <div>
-                  <span className="matter-kicker">Inbox for this decision</span>
-                  <h2>Three responses are ready for review</h2>
-                </div>
+                <h2>Responses</h2>
                 <span className="section-counter">
-                  {acceptedCount} accepted
+                  {acceptedCount} of {checks.length} accepted
                 </span>
               </div>
 
@@ -399,10 +361,6 @@ export function MatterDemo() {
           <aside className="matter-context-rail">
             <section>
               <span className="matter-kicker">Why Tax is involved</span>
-              <p className="context-lead">
-                A £8.2m employee ownership transaction needs tax clearance
-                before board approval.
-              </p>
               <dl>
                 <div>
                   <dt>Tax areas</dt>
@@ -488,12 +446,7 @@ export function MatterDemo() {
         <section className="matter-tab-panel">
           <div className="tab-panel-heading">
             <div>
-              <span className="matter-kicker">Advice-to-control review</span>
               <h2>What the report says and how Tax will use it</h2>
-              <p>
-                The system has preserved each condition and proposed an
-                operational check. A tax reviewer controls the decision.
-              </p>
             </div>
             <button
               className="matter-button matter-button-secondary"
@@ -528,11 +481,7 @@ export function MatterDemo() {
         <section className="matter-tab-panel">
           <div className="tab-panel-heading">
             <div>
-              <span className="matter-kicker">Cross-functional delivery</span>
               <h2>Workplan</h2>
-              <p>
-                Requests, owners and decision dependencies for this matter.
-              </p>
             </div>
             <button className="matter-button matter-button-primary" type="button">
               Add request
@@ -572,11 +521,7 @@ export function MatterDemo() {
         <section className="matter-tab-panel">
           <div className="tab-panel-heading">
             <div>
-              <span className="matter-kicker">Decision evidence</span>
               <h2>Evidence pack</h2>
-              <p>
-                Every accepted condition remains tied to the source and reviewer.
-              </p>
             </div>
             <button className="matter-button matter-button-secondary" type="button">
               Add evidence
@@ -612,11 +557,7 @@ export function MatterDemo() {
         <section className="matter-tab-panel">
           <div className="tab-panel-heading">
             <div>
-              <span className="matter-kicker">Audit record</span>
               <h2>Decision history</h2>
-              <p>
-                Material changes retain the actor, time, source and reason.
-              </p>
             </div>
           </div>
           <ol className="history-timeline">

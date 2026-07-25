@@ -76,3 +76,16 @@ Exit: no hex literals in component CSS outside the token block; `dashboard-mocku
 
 ## Accessibility floor
 Text ≥ 4.5:1 on its background (all pairs above pass); status never conveyed by colour alone (pills always carry words); focus ring on every interactive element; table headers are real `th[scope]`.
+
+## Copy rules (record surfaces)
+Applies to matters, decisions and registers — anywhere the user is reading their own record rather than being onboarded. See D-018.
+
+1. **One statement per fact.** A fact appears once on a screen; every other place links to it. Header, spotlight and rail must not restate the same transaction value, status or deadline.
+2. **State is shown by state.** If a disabled button, a counter or a progress ring conveys it, delete the sentence. No "approval becomes available when…" beside a disabled approve button.
+3. **Kickers only where the heading is ambiguous out of context.** Prefer deleting the kicker and strengthening the heading. "DECISION REQUIRED / Can Tax release the transaction?" is one label too many.
+4. **Nouns over narration.** `Consideration ≤ £8.4m · Finance · accepted 09:14` beats a sentence carrying the same content.
+5. **Explanation is on demand.** Method, rationale and boundary text sit behind one affordance per object, not ambient on the panel.
+6. **Numbers are the interface.** Amounts, dates, statutory references and clock lengths get typographic priority and tabular numerals; connective prose gets none.
+7. **First 400px answers the screen's one question.** A matter answers "can I sign this off, and what is stopping me".
+8. **Density is earned by the register, not the decision.** Decision surfaces stay sparse; coverage matrices, trigger timelines and query registers go dense and tabular.
+9. **Clocks render at their own scale.** A 14-day election and an annual filing must not look identical — urgency is a function of the clock's length, not only its date (`.ip-clock-short|medium|annual|long`).

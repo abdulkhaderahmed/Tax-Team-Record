@@ -32,9 +32,9 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <Link href="/" className="sidebar-mark">
-          <span className="mark-glyph">q</span>
+          <span className="mark-glyph">ta</span>
           <span>
-            <span className="mark-name">Quarterday</span>
+            <span className="mark-name">Tax-Able</span>
             <span className="mark-product">Tax operations</span>
           </span>
         </Link>
@@ -53,6 +53,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           <NavLink href="/documents">Advice &amp; sources</NavLink>
           <NavLink href="/approvals">Decisions</NavLink>
           <NavLink href="/entities">Entities &amp; groups</NavLink>
+
+          <div className="nav-section-label">Worked examples</div>
+          <NavLink href="/demo/steps-paper">Steps paper</NavLink>
+          <NavLink href="/demo/positions">Open positions</NavLink>
+          <NavLink href="/demo/incentive-plan">Incentive plan</NavLink>
 
           <details className="nav-details">
             <summary>Operating records</summary>

@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Quarterday — Tax operations",
+  title: "Tax-Able — Tax operations",
   description: "Tax matters, decisions and evidence for in-house teams",
 };
 
