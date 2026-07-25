@@ -139,10 +139,10 @@ export function MatterDemo() {
       <div className="matter-demo-banner">
         <div>
           <span className="matter-demo-dot" />
-          <strong>Interactive sample</strong>
+          <strong>Northstar Group · fictional workspace</strong>
           <span>
-            Created from one valuation report and a forwarded Legal email. No
-            entity setup was required.
+            £430m UK private group · 14 active entities · 3-person tax team.
+            This matter began with one valuation report and a Legal email.
           </span>
         </div>
         <button onClick={resetDemo} type="button">
@@ -177,7 +177,7 @@ export function MatterDemo() {
           </div>
           <p>
             Northstar Operations Ltd · Board approval 31 July 2026 · Tax owner:
-            You
+            You, Head of Tax
           </p>
         </div>
         <div className="matter-heading-actions">

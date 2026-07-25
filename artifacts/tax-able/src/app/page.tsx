@@ -64,7 +64,7 @@ function fmtDate(date: Date) {
 function demoWorkbench(): WorkbenchData {
   return {
     isGuidedDemo: true,
-    organisationName: "Northstar Group — sample workspace",
+    organisationName: "Northstar Group — £430m UK private group",
     reviewCount: 6,
     blockerCount: 2,
     pendingApprovalCount: 1,
@@ -267,7 +267,7 @@ async function loadWorkbench(): Promise<WorkbenchData> {
         ...demoWorkbench(),
         organisationName:
           context.orgId === "demo-org"
-            ? "Northstar Group — guided sample"
+            ? "Northstar Group — £430m UK private group"
             : `${context.organisation.name} — guided sample`,
       };
     }
@@ -371,8 +371,8 @@ export default async function DashboardPage() {
           <div>
             <strong>Sample workspace</strong>
             <span>
-              Explore a transaction matter with advice, stakeholder responses,
-              evidence and tax sign-off already connected.
+              A fictional three-person tax team managing adviser reports,
+              stakeholder responses, evidence and tax sign-off.
             </span>
           </div>
           <Link href="/demo/matter" className="matter-button matter-button-primary">
@@ -391,7 +391,7 @@ export default async function DashboardPage() {
         </div>
         <div className="hq-header-actions">
           <Link href="/documents/new" className="matter-button matter-button-secondary">
-            Add advice
+            Upload adviser advice
           </Link>
           <Link href="/demo/matter" className="matter-button matter-button-primary">
             Start a matter
@@ -560,7 +560,7 @@ export default async function DashboardPage() {
               <Link href="/documents/new">
                 <span>↑</span>
                 <span>
-                  <strong>Upload advice</strong>
+                  <strong>Upload adviser advice</strong>
                   <small>PDF, Word or email</small>
                 </span>
               </Link>

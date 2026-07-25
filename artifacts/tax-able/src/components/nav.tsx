@@ -9,14 +9,14 @@ const OPEN_REVIEW_STATUSES = ["Needs review", "In review", "Needs adviser input"
 export async function AppShell({ children }: { children: React.ReactNode }) {
   let openReviewCount = 0;
   let organisationName = "Northstar Group";
-  let workspaceLabel = "Interactive sample";
+  let workspaceLabel = "3-person tax team";
   try {
     const context = await requireOrg();
     const { orgId } = context;
     organisationName =
       orgId === "demo-org" ? "Northstar Group" : context.organisation.name;
     workspaceLabel =
-      orgId === "demo-org" ? "Interactive sample" : "Current workspace";
+      orgId === "demo-org" ? "3-person tax team" : "Current workspace";
     openReviewCount = await prisma.reviewItem.count({
       where: {
         organisationId: orgId,
