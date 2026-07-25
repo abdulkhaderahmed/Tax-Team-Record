@@ -393,8 +393,8 @@ export default async function DashboardPage() {
           <Link href="/documents/new" className="matter-button matter-button-secondary">
             Upload adviser advice
           </Link>
-          <Link href="/demo/matter" className="matter-button matter-button-primary">
-            Start a matter
+          <Link href="/matters/new" className="matter-button matter-button-primary">
+            Add tax matter
           </Link>
         </div>
       </header>
@@ -564,7 +564,7 @@ export default async function DashboardPage() {
                   <small>PDF, Word or email</small>
                 </span>
               </Link>
-              <Link href="/demo/matter">
+              <Link href="/matters/new">
                 <span>↗</span>
                 <span>
                   <strong>Report a business change</strong>

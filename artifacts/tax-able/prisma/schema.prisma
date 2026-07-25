@@ -44,6 +44,7 @@ model Organisation {
   documentRecordLinks DocumentRecordLink[]
   reviewRecordLinks   ReviewItemRecordLink[]
   extractionRuns      ExtractionRun[]
+  matters             Matter[]
 }
 
 model User {
@@ -77,6 +78,7 @@ model User {
   approvalsAssigned          Approval[]             @relation("ApprovalApprover")
   approvalsDecided           Approval[]             @relation("ApprovalDecidedBy")
   taxRegistrationsVerified   TaxRegistration[]      @relation("TaxRegistrationVerifiedBy")
+  mattersCreated             Matter[]               @relation("MatterCreatedBy")
   accountingPeriodsVerified  AccountingPeriod[]     @relation("AccountingPeriodVerifiedBy")
   regimeAssessmentsConfirmed RegimeAssessment[]     @relation("RegimeAssessmentConfirmedBy")
   obligationsCreated         Obligation[]           @relation("ObligationCreatedBy")
@@ -201,6 +203,7 @@ model Entity {
   approvals         Approval[]
   accountingPeriods AccountingPeriod[]
   regimeAssessments RegimeAssessment[]
+  matters           Matter[]
 }
 
 model EntityGroup {
@@ -551,6 +554,52 @@ model Obligation {
 // ── Live objects created from confirmed review items ───────────
 // These are only ever created via an explicit human confirmation
 // of a draft ReviewItem — never written to directly by extraction.
+
+/// A unit of tax work that needs resolving: a transaction, an enquiry, an
+/// adviser report to implement. Deliberately thin — it links existing records
+/// rather than duplicating them (see DECISIONS.md D-025).
+model Matter {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  entityId       String?
+  entity         Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  reference   String
+  title       String
+  matterType  String // Transaction | Advice implementation | Enquiry | Reorganisation | Incentives & reward | Compliance | Other
+  summary     String?
+
+  /// The question this matter exists to answer. Required — a matter without a
+  /// decision to reach is a folder, not a matter.
+  decisionQuestion String
+
+  status   String @default("Open") // Open | Blocked | Awaiting approval | Resolved | Not proceeded
+  priority String @default("Normal") // Low | Normal | High | Critical
+
+  taxAreas String? // comma-separated, e.g. "Corporation tax, VAT, ERS"
+
+  taxOwner        String?
+  businessSponsor String?
+  externalAdviser String?
+
+  targetDecisionDate DateTime?
+  resolvedAt         DateTime?
+  resolutionNote     String?
+
+  createdByUserId String?
+  createdBy       User?   @relation("MatterCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  archivedAt     DateTime?
+  archivedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organisationId, reference])
+  @@index([organisationId, status])
+  @@index([entityId])
+}
 
 model Action {
   id             String       @id @default(cuid())

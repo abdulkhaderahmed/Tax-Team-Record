@@ -42,7 +42,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="nav">
           <div className="nav-section-label">Workspace</div>
           <NavLink href="/" exact>Today</NavLink>
-          <NavLink href="/demo/matter">Matters</NavLink>
+          <NavLink href="/matters">Matters</NavLink>
           <NavLink href="/review">
             <span>Inbox</span>
             {openReviewCount > 0 && <span className="badge badge-blue num">{openReviewCount}</span>}

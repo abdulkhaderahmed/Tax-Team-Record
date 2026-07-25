@@ -178,12 +178,9 @@ export function MatterDemo() {
           </p>
         </div>
         <div className="matter-heading-actions">
-          <button className="matter-button matter-button-secondary" type="button">
-            Share
-          </button>
-          <button className="matter-button matter-button-primary" type="button">
-            Add work
-          </button>
+          <a className="matter-button matter-button-primary" href="/matters/new">
+            Add tax matter
+          </a>
         </div>
       </header>
 

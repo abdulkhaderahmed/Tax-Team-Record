@@ -3503,3 +3503,60 @@ select.form-input { cursor: pointer; }
   .sp-exceptions > li { grid-template-columns: 76px minmax(0, 1fr); }
   .sp-exception-id { display: none; }
 }
+
+/* ── Matter detail: resolve form, tax areas, related links ── */
+.matter-resolve-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px 18px;
+}
+.matter-resolve-form label {
+  color: #7A8582;
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.matter-resolve-form textarea {
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+.matter-resolve-actions {
+  display: flex;
+  gap: 8px;
+}
+.matter-resolve-actions select {
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: white;
+  font: inherit;
+  font-size: 12px;
+}
+.matter-tax-areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.matter-tax-areas span {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #F2F4F3;
+  color: #5A6663;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.matter-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.matter-links a {
+  color: var(--brand);
+  font-size: 11.5px;
+}
