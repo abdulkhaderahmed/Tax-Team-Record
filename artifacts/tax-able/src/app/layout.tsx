@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "tax-able — Tax Obligations Register",
-  description: "In-house tax team system of record",
+  title: "tax-able — Tax decision operations",
+  description: "Advice, decisions and controls for in-house tax teams",
 };
 
 export default function RootLayout({

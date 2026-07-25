@@ -31,44 +31,47 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <nav className="nav">
-          <div className="nav-section-label">Navigation</div>
-          <NavLink href="/" exact>Dashboard</NavLink>
+          <div className="nav-section-label">Work</div>
+          <NavLink href="/" exact>Tax workbench</NavLink>
           <NavLink href="/review">
-            <span>Review Queue</span>
+            <span>Advice review</span>
             {openReviewCount > 0 && <span className="badge badge-blue num">{openReviewCount}</span>}
           </NavLink>
-
-          <div className="nav-section-label">Registers</div>
-          <NavLink href="/entities">Entity Register</NavLink>
-          <NavLink href="/groups">Group Structure</NavLink>
-          <NavLink href="/registrations">Tax Registrations</NavLink>
-          <NavLink href="/periods">Accounting Periods</NavLink>
-          <NavLink href="/obligations">Obligation Register</NavLink>
-          <NavLink href="/actions-register">Actions Register</NavLink>
-          <NavLink href="/assumptions">Assumptions</NavLink>
-          <NavLink href="/caveats">Caveats</NavLink>
-          <NavLink href="/tripwires">Tripwires</NavLink>
-          <NavLink href="/exceptions">Exceptions</NavLink>
-          <NavLink href="/evidence">Evidence</NavLink>
-          <NavLink href="/data-requests">Data Requests</NavLink>
+          <NavLink href="/actions-register">Actions</NavLink>
+          <NavLink href="/data-requests">Data requests</NavLink>
+          <NavLink href="/exceptions">Blockers</NavLink>
           <NavLink href="/approvals">Approvals</NavLink>
-          <NavLink href="/obligations/drafts">Draft Obligations</NavLink>
-          <NavLink href="/documents">Document Vault</NavLink>
+          <NavLink href="/demo/advice">Guided demo</NavLink>
 
-          <div className="nav-section-label">Sources</div>
-          <NavLink href="/sources">Source Systems</NavLink>
-          <NavLink href="/sources/data-categories">Data Categories</NavLink>
-          <NavLink href="/sources/priority-rules">Priority Rules</NavLink>
-          <NavLink href="/sources/conflicts">Conflicts</NavLink>
+          <div className="nav-section-label">Records</div>
+          <NavLink href="/documents">Source documents</NavLink>
+          <NavLink href="/obligations">Deadlines &amp; filings</NavLink>
+          <NavLink href="/entities">Entities &amp; groups</NavLink>
+          <NavLink href="/evidence">Evidence</NavLink>
 
-          <div className="nav-section-label">Reference</div>
-          <NavLink href="/rules-pack">Controlled Rules</NavLink>
-          <NavLink href="/rule-impact">Rule Impacts</NavLink>
-          <NavLink href="/ai-assurance">AI Assurance</NavLink>
-          <NavLink href="/audit">Audit History</NavLink>
+          <details className="nav-details">
+            <summary>All registers and settings</summary>
+            <div className="nav-details-links">
+              <NavLink href="/groups">Group structure</NavLink>
+              <NavLink href="/registrations">Tax registrations</NavLink>
+              <NavLink href="/periods">Accounting periods</NavLink>
+              <NavLink href="/assumptions">Assumptions</NavLink>
+              <NavLink href="/caveats">Caveats</NavLink>
+              <NavLink href="/tripwires">Tripwires</NavLink>
+              <NavLink href="/obligations/drafts">Draft obligations</NavLink>
+              <NavLink href="/sources">Source systems</NavLink>
+              <NavLink href="/sources/data-categories">Data categories</NavLink>
+              <NavLink href="/sources/priority-rules">Priority rules</NavLink>
+              <NavLink href="/sources/conflicts">Source conflicts</NavLink>
+              <NavLink href="/rules-pack">Controlled rules</NavLink>
+              <NavLink href="/rule-impact">Rule impacts</NavLink>
+              <NavLink href="/ai-assurance">AI assurance</NavLink>
+              <NavLink href="/audit">Audit history</NavLink>
+            </div>
+          </details>
         </nav>
 
-        <div className="sidebar-foot">Tax obligations register</div>
+        <div className="sidebar-foot">Advice, decisions and controls</div>
       </aside>
 
       <main className="main">{children}</main>
