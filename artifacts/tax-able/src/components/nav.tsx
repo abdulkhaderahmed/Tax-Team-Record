@@ -8,9 +8,15 @@ const OPEN_REVIEW_STATUSES = ["Needs review", "In review", "Needs adviser input"
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   let openReviewCount = 0;
+  let organisationName = "Northstar Group";
+  let workspaceLabel = "Interactive sample";
   try {
     const context = await requireOrg();
     const { orgId } = context;
+    organisationName =
+      orgId === "demo-org" ? "Northstar Group" : context.organisation.name;
+    workspaceLabel =
+      orgId === "demo-org" ? "Interactive sample" : "Current workspace";
     openReviewCount = await prisma.reviewItem.count({
       where: {
         organisationId: orgId,
@@ -26,32 +32,36 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <Link href="/" className="sidebar-mark">
-          <span className="mark-glyph">t</span>
-          <span className="mark-name">tax-able</span>
+          <span className="mark-glyph">q</span>
+          <span>
+            <span className="mark-name">Quarterday</span>
+            <span className="mark-product">Tax operations</span>
+          </span>
         </Link>
 
         <nav className="nav">
-          <div className="nav-section-label">Work</div>
-          <NavLink href="/" exact>Tax workbench</NavLink>
+          <div className="nav-section-label">Workspace</div>
+          <NavLink href="/" exact>Today</NavLink>
+          <NavLink href="/demo/matter">Matters</NavLink>
           <NavLink href="/review">
-            <span>Advice review</span>
+            <span>Inbox</span>
             {openReviewCount > 0 && <span className="badge badge-blue num">{openReviewCount}</span>}
           </NavLink>
-          <NavLink href="/actions-register">Actions</NavLink>
-          <NavLink href="/data-requests">Data requests</NavLink>
-          <NavLink href="/exceptions">Blockers</NavLink>
-          <NavLink href="/approvals">Approvals</NavLink>
-          <NavLink href="/demo/advice">Guided demo</NavLink>
+          <NavLink href="/obligations/calendar">Calendar</NavLink>
 
-          <div className="nav-section-label">Records</div>
-          <NavLink href="/documents">Source documents</NavLink>
-          <NavLink href="/obligations">Deadlines &amp; filings</NavLink>
+          <div className="nav-section-label">Knowledge</div>
+          <NavLink href="/documents">Advice &amp; sources</NavLink>
+          <NavLink href="/approvals">Decisions</NavLink>
           <NavLink href="/entities">Entities &amp; groups</NavLink>
-          <NavLink href="/evidence">Evidence</NavLink>
 
           <details className="nav-details">
-            <summary>All registers and settings</summary>
+            <summary>Operating records</summary>
             <div className="nav-details-links">
+              <NavLink href="/actions-register">Actions</NavLink>
+              <NavLink href="/data-requests">Data requests</NavLink>
+              <NavLink href="/exceptions">Exceptions</NavLink>
+              <NavLink href="/evidence">Evidence</NavLink>
+              <NavLink href="/obligations">Deadlines &amp; filings</NavLink>
               <NavLink href="/groups">Group structure</NavLink>
               <NavLink href="/registrations">Tax registrations</NavLink>
               <NavLink href="/periods">Accounting periods</NavLink>
@@ -71,7 +81,15 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           </details>
         </nav>
 
-        <div className="sidebar-foot">Advice, decisions and controls</div>
+        <div className="sidebar-foot">
+          <span className="sidebar-workspace-mark">
+            {organisationName.slice(0, 1).toUpperCase()}
+          </span>
+          <span>
+            <strong>{organisationName}</strong>
+            <small>{workspaceLabel}</small>
+          </span>
+        </div>
       </aside>
 
       <main className="main">{children}</main>

@@ -75,7 +75,7 @@ function demoWorkbench(): WorkbenchData {
         kind: "Advice review",
         title: "Confirm the controls arising from an EOT valuation",
         context: "3 cited candidates · all preserve a condition",
-        href: "/demo/advice",
+        href: "/demo/matter",
         tone: "blue",
       },
       {
@@ -83,7 +83,7 @@ function demoWorkbench(): WorkbenchData {
         kind: "Blocker",
         title: "Share consideration has not been reconciled to the valuation",
         context: "Owner: Tax Manager · required before transaction approval",
-        href: "/demo/advice",
+        href: "/demo/matter",
         tone: "red",
       },
       {
@@ -104,7 +104,7 @@ function demoWorkbench(): WorkbenchData {
         status: "Human review",
         candidateCount: 3,
         conditionalCount: 3,
-        href: "/demo/advice",
+        href: "/demo/matter",
       },
     ],
     deadlines: [
@@ -265,7 +265,10 @@ async function loadWorkbench(): Promise<WorkbenchData> {
     if (!hasOperationalData) {
       return {
         ...demoWorkbench(),
-        organisationName: `${context.organisation.name} — guided sample`,
+        organisationName:
+          context.orgId === "demo-org"
+            ? "Northstar Group — guided sample"
+            : `${context.organisation.name} — guided sample`,
       };
     }
 
@@ -358,229 +361,253 @@ async function loadWorkbench(): Promise<WorkbenchData> {
   }
 }
 
-function Metric({
-  value,
-  label,
-  href,
-  alert,
-}: {
-  value: number;
-  label: string;
-  href: string;
-  alert?: boolean;
-}) {
-  return (
-    <Link className={`work-metric${alert ? " work-metric-alert" : ""}`} href={href}>
-      <span className="work-metric-value">{value}</span>
-      <span className="work-metric-label">{label}</span>
-    </Link>
-  );
-}
-
 export default async function DashboardPage() {
   const data = await loadWorkbench();
 
   return (
-    <div className="workbench">
+    <div className="hq-home">
       {data.isGuidedDemo && (
-        <div className="demo-notice">
+        <div className="hq-demo-notice">
           <div>
-            <strong>Guided demo data is active.</strong>
+            <strong>Sample workspace</strong>
             <span>
-              {" "}
-              This workspace has no live work to show, so the page uses a
-              complete sample matter without writing to the database.
+              Explore a transaction matter with advice, stakeholder responses,
+              evidence and tax sign-off already connected.
             </span>
           </div>
-          <Link href="/demo/advice" className="btn btn-primary btn-sm">
-            Start the advice review
+          <Link href="/demo/matter" className="matter-button matter-button-primary">
+            Open complete matter
           </Link>
         </div>
       )}
 
-      <header className="workbench-header">
+      <header className="hq-header">
         <div>
           <div className="eyebrow">{data.organisationName}</div>
-          <h1>Tax workbench</h1>
+          <h1>Today</h1>
           <p>
-            Decisions, blockers and evidence that need the tax team’s attention.
+            Work that needs tax judgement, a response or an escalation.
           </p>
         </div>
-        <div className="workbench-actions">
-          <Link href="/demo/advice" className="btn">
-            View guided example
+        <div className="hq-header-actions">
+          <Link href="/documents/new" className="matter-button matter-button-secondary">
+            Add advice
           </Link>
-          <Link href="/documents/new" className="btn btn-primary">
-            Upload advice
+          <Link href="/demo/matter" className="matter-button matter-button-primary">
+            Start a matter
           </Link>
         </div>
       </header>
 
-      <section className="work-metrics" aria-label="Current workload">
-        <Metric value={data.reviewCount} label="Advice items to review" href="/review" />
-        <Metric
-          value={data.blockerCount}
-          label="Controls blocked"
-          href="/exceptions"
-          alert={data.blockerCount > 0}
-        />
-        <Metric
-          value={data.overdueRequestCount}
-          label="Overdue data requests"
-          href="/data-requests"
-          alert={data.overdueRequestCount > 0}
-        />
-        <Metric
-          value={data.pendingApprovalCount}
-          label="Decisions awaiting approval"
-          href="/approvals"
-        />
+      <section className="hq-decision-spotlight">
+        <div className="hq-spotlight-main">
+          <div className="hq-spotlight-meta">
+            <span>Next tax decision</span>
+            <span className="matter-status matter-status-blocked">
+              Sign-off blocked
+            </span>
+          </div>
+          <h2>Can the EOT share sale proceed to board approval?</h2>
+          <p>
+            Finance, Legal and the valuation adviser have responded. Their
+            evidence needs your acceptance before Tax releases the transaction.
+          </p>
+          <div className="hq-spotlight-facts">
+            <span>
+              <strong>3</strong> responses ready
+            </span>
+            <span>
+              <strong>£8.2m</strong> transaction value
+            </span>
+            <span>
+              <strong>29 Jul</strong> tax decision due
+            </span>
+          </div>
+        </div>
+        <div className="hq-spotlight-action">
+          <span className="hq-progress-label">0 of 3 checks accepted</span>
+          <div className="hq-progress-track">
+            <span />
+          </div>
+          <Link href="/demo/matter" className="matter-button matter-button-primary">
+            Review the decision
+          </Link>
+        </div>
       </section>
 
-      <div className="workbench-grid">
-        <div>
-          <section className="work-card">
-            <div className="work-card-header">
+      <div className="hq-grid">
+        <div className="hq-main-column">
+          <section className="hq-card">
+            <div className="hq-card-heading">
               <div>
-                <div className="eyebrow">Daily queue</div>
-                <h2>Needs attention</h2>
+                <div className="eyebrow">Priority queue</div>
+                <h2>What needs you</h2>
               </div>
-              <span className="text-muted text-sm">
-                Ordered by control risk
-              </span>
+              <span>{data.attention.length} open</span>
             </div>
             {data.attention.length === 0 ? (
-              <div className="work-empty">
-                No open blockers, overdue requests, approvals or advice reviews.
+              <div className="hq-empty">
+                No open decisions, exceptions or overdue requests.
               </div>
             ) : (
-              <div className="attention-list">
+              <div className="hq-queue">
                 {data.attention.map((item) => (
-                  <Link className="attention-item" href={item.href} key={`${item.kind}-${item.id}`}>
-                    <span className={`attention-marker attention-${item.tone}`} />
-                    <span className="attention-copy">
-                      <span className="attention-kind">{item.kind}</span>
+                  <Link className="hq-queue-item" href={item.href} key={`${item.kind}-${item.id}`}>
+                    <span className={`hq-queue-marker hq-marker-${item.tone}`} />
+                    <span className="hq-queue-copy">
+                      <span>{item.kind}</span>
                       <strong>{item.title}</strong>
-                      <span>{item.context}</span>
+                      <small>{item.context}</small>
                     </span>
-                    <span className="attention-open">Open</span>
+                    <span className="hq-queue-open">Review</span>
                   </Link>
                 ))}
               </div>
             )}
           </section>
 
-          <section className="work-card">
-            <div className="work-card-header">
+          <section className="hq-card">
+            <div className="hq-card-heading">
               <div>
-                <div className="eyebrow">Advice implementation</div>
-                <h2>Recent matters</h2>
+                <div className="eyebrow">Active work</div>
+                <h2>Matters</h2>
               </div>
-              <Link href="/documents">All source documents</Link>
+              <Link href="/demo/matter">View sample matter</Link>
             </div>
             {data.adviceMatters.length === 0 ? (
-              <div className="work-empty">
-                Upload an adviser report to create the first review matter.
+              <div className="hq-empty">
+                Add an adviser report or business event to create the first matter.
               </div>
             ) : (
-              <div className="matter-list">
+              <div className="hq-matter-list">
                 {data.adviceMatters.map((matter) => (
-                  <Link className="matter-item" href={matter.href} key={matter.id}>
-                    <span className="matter-main">
-                      <strong>{matter.title}</strong>
+                  <Link className="hq-matter-row" href={matter.href} key={matter.id}>
+                    <span className="hq-matter-identity">
+                      <span className="hq-matter-icon">TR</span>
                       <span>
-                        {matter.documentType} · {matter.entity}
+                        <strong>{matter.title}</strong>
+                        <small>
+                          {matter.documentType} · {matter.entity}
+                        </small>
                       </span>
                     </span>
-                    <span className="matter-counts">
-                      <span>{matter.candidateCount} candidates</span>
-                      {matter.conditionalCount > 0 && (
-                        <span>{matter.conditionalCount} conditional</span>
-                      )}
+                    <span className="hq-matter-detail">
+                      <small>Next decision</small>
+                      <strong>
+                        {matter.conditionalCount > 0
+                          ? `${matter.conditionalCount} conditions to review`
+                          : "Matter brief to review"}
+                      </strong>
                     </span>
-                    <span className="badge badge-blue">{matter.status}</span>
+                    <span className="hq-matter-status">
+                      <span className="response-state">{matter.status}</span>
+                      <small>{matter.candidateCount} source records</small>
+                    </span>
                   </Link>
                 ))}
+                {data.isGuidedDemo && (
+                  <>
+                    <div className="hq-matter-row hq-matter-row-static">
+                      <span className="hq-matter-identity">
+                        <span className="hq-matter-icon employment">ET</span>
+                        <span>
+                          <strong>PAYE settlement agreement 2025/26</strong>
+                          <small>Employment tax · Northstar Group</small>
+                        </span>
+                      </span>
+                      <span className="hq-matter-detail">
+                        <small>Next decision</small>
+                        <strong>Approve population and gross-up basis</strong>
+                      </span>
+                      <span className="hq-matter-status">
+                        <span className="response-state">Finance overdue</span>
+                        <small>Due 28 Jul</small>
+                      </span>
+                    </div>
+                    <div className="hq-matter-row hq-matter-row-static">
+                      <span className="hq-matter-identity">
+                        <span className="hq-matter-icon hmrc">HM</span>
+                        <span>
+                          <strong>HMRC information request</strong>
+                          <small>Corporation tax · Northstar Services Ltd</small>
+                        </span>
+                      </span>
+                      <span className="hq-matter-detail">
+                        <small>Next decision</small>
+                        <strong>Review draft response and evidence pack</strong>
+                      </span>
+                      <span className="hq-matter-status">
+                        <span className="response-state accepted">On track</span>
+                        <small>Due 2 Aug</small>
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </section>
         </div>
 
-        <aside>
-          <section className="work-card workflow-card">
-            <div className="eyebrow">First-session workflow</div>
-            <h2>Turn advice into owned work</h2>
-            <ol className="workflow-steps">
-              <li>
-                <span>1</span>
-                <div>
-                  <strong>Add the source</strong>
-                  <p>Upload a memo, report or HMRC letter.</p>
-                </div>
-              </li>
-              <li>
-                <span>2</span>
-                <div>
-                  <strong>Review cited candidates</strong>
-                  <p>Keep conditions and source pages attached.</p>
-                </div>
-              </li>
-              <li>
-                <span>3</span>
-                <div>
-                  <strong>Confirm the decision</strong>
-                  <p>Approve the treatment or request missing facts.</p>
-                </div>
-              </li>
-              <li>
-                <span>4</span>
-                <div>
-                  <strong>Track implementation</strong>
-                  <p>Assign actions, evidence and future review events.</p>
-                </div>
-              </li>
-            </ol>
-            <Link href="/demo/advice" className="btn btn-primary workflow-cta">
-              Try the sample matter
-            </Link>
-            <p className="workflow-boundary">
-              AI proposes records. A tax reviewer decides what becomes live.
+        <aside className="hq-side-column">
+          <section className="hq-card hq-capture-card">
+            <div className="eyebrow">Start with the work</div>
+            <h2>Capture tax work without a setup project</h2>
+            <p>
+              Begin with one document, email or business event. Link entities
+              and registrations once they are known.
             </p>
+            <div className="hq-capture-options">
+              <Link href="/documents/new">
+                <span>↑</span>
+                <span>
+                  <strong>Upload advice</strong>
+                  <small>PDF, Word or email</small>
+                </span>
+              </Link>
+              <Link href="/demo/matter">
+                <span>↗</span>
+                <span>
+                  <strong>Report a business change</strong>
+                  <small>Transaction, hire or restructuring</small>
+                </span>
+              </Link>
+              <Link href="/obligations/import">
+                <span>+</span>
+                <span>
+                  <strong>Import the tax calendar</strong>
+                  <small>Start with an existing CSV</small>
+                </span>
+              </Link>
+            </div>
           </section>
 
-          <section className="work-card">
-            <div className="work-card-header compact">
+          <section className="hq-card">
+            <div className="hq-card-heading compact">
               <div>
-                <div className="eyebrow">Next 90 days</div>
-                <h2>Deadlines</h2>
+                <div className="eyebrow">Next dates</div>
+                <h2>Calendar</h2>
               </div>
-              <Link href="/obligations/calendar">Calendar</Link>
+              <Link href="/obligations/calendar">Open</Link>
             </div>
-            {data.deadlines.length === 0 ? (
-              <div className="work-empty small">
-                No confirmed deadlines in the next 90 days.
-              </div>
-            ) : (
-              <div className="deadline-list">
-                {data.deadlines.map((deadline) => (
-                  <Link href={deadline.href} className="deadline-item" key={deadline.id}>
-                    <span className="deadline-date">
-                      <strong>{deadline.dueDate.getDate()}</strong>
-                      <span>
-                        {deadline.dueDate.toLocaleDateString("en-GB", {
-                          month: "short",
-                        })}
-                      </span>
-                    </span>
-                    <span className="deadline-copy">
-                      <strong>{deadline.title}</strong>
-                      <span>{deadline.entity}</span>
-                    </span>
-                    <span className="text-sm text-muted">{deadline.status}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
+            <div className="hq-deadlines">
+              {data.deadlines.slice(0, 3).map((deadline) => (
+                <Link href={deadline.href} key={deadline.id}>
+                  <span className="hq-date">
+                    <strong>{deadline.dueDate.getDate()}</strong>
+                    <small>
+                      {deadline.dueDate.toLocaleDateString("en-GB", {
+                        month: "short",
+                      })}
+                    </small>
+                  </span>
+                  <span>
+                    <strong>{deadline.title}</strong>
+                    <small>{deadline.entity}</small>
+                  </span>
+                  <small>{deadline.status}</small>
+                </Link>
+              ))}
+            </div>
           </section>
         </aside>
       </div>
